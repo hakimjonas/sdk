@@ -358,7 +358,9 @@ enum StaticIntrinsic {
   wasmMemoryStoreInt8('dart:_wasm', null, 'MemoryAccessExtension|storeInt8'),
   wasmMemoryStoreInt16('dart:_wasm', null, 'MemoryAccessExtension|storeInt16'),
   wasmMemoryStoreInt32('dart:_wasm', null, 'MemoryAccessExtension|storeInt32'),
-  wasmMemoryStoreInt64('dart:_wasm', null, 'MemoryAccessExtension|storeInt64');
+  wasmMemoryStoreInt64('dart:_wasm', null, 'MemoryAccessExtension|storeInt64'),
+  mathMin('dart:math', null, 'min'),
+  mathMax('dart:math', null, 'max');
 
   final String library;
   final String? cls;
@@ -2603,6 +2605,87 @@ class Intrinsifier {
         }
 
         return codeGen.voidMarker;
+
+      case StaticIntrinsic.mathMin:
+        if (node.arguments.positional.length != 2) return null;
+        final aType = translator.translateType(
+          dartTypeOf(node.arguments.positional[0]),
+        );
+        final bType = translator.translateType(
+          dartTypeOf(node.arguments.positional[1]),
+        );
+        if (aType == doubleType && bType == doubleType) {
+          codeGen.translateExpression(
+            node.arguments.positional[0],
+            w.NumType.f64,
+          );
+          codeGen.translateExpression(
+            node.arguments.positional[1],
+            w.NumType.f64,
+          );
+          b.f64_min();
+          return w.NumType.f64;
+        }
+        if (aType == intType && bType == intType) {
+          w.Local localA = b.addLocal(w.NumType.i64);
+          w.Local localB = b.addLocal(w.NumType.i64);
+          codeGen.translateExpression(
+            node.arguments.positional[0],
+            w.NumType.i64,
+          );
+          b.local_tee(localA);
+          codeGen.translateExpression(
+            node.arguments.positional[1],
+            w.NumType.i64,
+          );
+          b.local_tee(localB);
+          b.local_get(localA);
+          b.local_get(localB);
+          b.i64_le_s();
+          b.select(w.NumType.i64);
+          return w.NumType.i64;
+        }
+        return null;
+      case StaticIntrinsic.mathMax:
+        if (node.arguments.positional.length != 2) return null;
+        final aType = translator.translateType(
+          dartTypeOf(node.arguments.positional[0]),
+        );
+        final bType = translator.translateType(
+          dartTypeOf(node.arguments.positional[1]),
+        );
+        if (aType == doubleType && bType == doubleType) {
+          codeGen.translateExpression(
+            node.arguments.positional[0],
+            w.NumType.f64,
+          );
+          codeGen.translateExpression(
+            node.arguments.positional[1],
+            w.NumType.f64,
+          );
+          b.f64_max();
+          return w.NumType.f64;
+        }
+        if (aType == intType && bType == intType) {
+          w.Local localA = b.addLocal(w.NumType.i64);
+          w.Local localB = b.addLocal(w.NumType.i64);
+          codeGen.translateExpression(
+            node.arguments.positional[0],
+            w.NumType.i64,
+          );
+          b.local_tee(localA);
+          codeGen.translateExpression(
+            node.arguments.positional[1],
+            w.NumType.i64,
+          );
+          b.local_tee(localB);
+          b.local_get(localA);
+          b.local_get(localB);
+          b.i64_ge_s();
+          b.select(w.NumType.i64);
+          return w.NumType.i64;
+        }
+        return null;
     }
   }
 

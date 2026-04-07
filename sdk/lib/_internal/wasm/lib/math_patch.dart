@@ -10,6 +10,7 @@ import "dart:_wasm";
 
 /// There are no parts of this patch library.
 
+@pragma('wasm:intrinsic')
 @patch
 T min<T extends num>(T a, T b) {
   if (a > b) return b;
@@ -33,6 +34,7 @@ T min<T extends num>(T a, T b) {
   return a;
 }
 
+@pragma('wasm:intrinsic')
 @patch
 T max<T extends num>(T a, T b) {
   if (a > b) return a;
