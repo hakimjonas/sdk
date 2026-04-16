@@ -1,3 +1,7 @@
+## 12.2.0-dev
+
+* Added `InterfaceType.inheritedConcreteMembers` and `InterfaceType.interfaceMembers`.
+
 ## 12.1.0
 
 * Support type aliases for `dynamic`, `Never`, and `void`. As a result, it is no longer safe to assume that

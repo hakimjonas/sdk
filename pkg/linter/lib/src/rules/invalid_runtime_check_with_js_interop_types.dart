@@ -23,6 +23,7 @@ import 'package:analyzer/src/dart/element/type_visitor.dart';
 import '../analyzer.dart';
 import '../diagnostic.dart' as diag;
 
+const String _dartJsAnnotationsUri = 'dart:_js_annotations';
 const String _dartJsInteropUri = 'dart:js_interop';
 const String _dartJsUri = 'dart:js';
 
@@ -86,9 +87,15 @@ bool _isWasmIncompatibleJsInterop(DartType type) {
   }
   if (type is! InterfaceType) return false;
   var element = type.element;
-  // `hasJS` only checks for the `dart:_js_annotations` definition, which is
-  // what we want here.
-  if (element.metadata.hasJS) return true;
+  // Ignore if `package:js` class.
+  for (var annotation in element.metadata.annotations) {
+    var annotationElement = annotation.element;
+    if (annotationElement is ConstructorElement &&
+        annotationElement.isFromLibrary(_dartJsAnnotationsUri) &&
+        annotationElement.enclosingElement.name == 'JS') {
+      return true;
+    }
+  }
   return _sdkWebLibraries.any((uri) => element.isFromLibrary(uri)) ||
       // While a type test with types from this library is very rare, we should
       // still ignore it for consistency.
@@ -107,7 +114,8 @@ DartType? _jsTypeForStaticInterop(InterfaceType type) {
   var element = type.element;
   if (element is! ClassElement) return null;
   var metadata = element.metadata;
-  var hasJS = false;
+  if (!metadata.hasJS) return null;
+
   var hasStaticInterop = false;
   LibraryElement? dartJsInterop;
   for (var annotation in metadata.annotations) {
@@ -115,7 +123,6 @@ DartType? _jsTypeForStaticInterop(InterfaceType type) {
     if (annotationElement is ConstructorElement &&
         annotationElement.isFromLibrary(_dartJsInteropUri) &&
         annotationElement.enclosingElement.name == 'JS') {
-      hasJS = true;
       dartJsInterop = annotationElement.library;
     } else if (annotationElement is GetterElement &&
         annotationElement.isFromLibrary(_dartJsInteropUri) &&
@@ -123,7 +130,7 @@ DartType? _jsTypeForStaticInterop(InterfaceType type) {
       hasStaticInterop = true;
     }
   }
-  return (hasJS && hasStaticInterop && dartJsInterop != null)
+  return (hasStaticInterop && dartJsInterop != null)
       ? dartJsInterop.extensionTypes
             .singleWhere((extType) => extType.name == 'JSObject')
             // Nullability is ignored in this lint, so just return `thisType`.

@@ -494,10 +494,20 @@ abstract class RenameRefactoring implements Refactoring {
       );
     }
     if (element is LabelElement) {
-      return RenameLabelRefactoringImpl(workspace, sessionHelper, element);
+      return RenameLabelRefactoringImpl(
+        workspace,
+        sessionHelper,
+        resolvedUnit,
+        element,
+      );
     }
     if (element is LibraryElement) {
-      return RenameLibraryRefactoringImpl(workspace, sessionHelper, element);
+      return RenameLibraryRefactoringImpl(
+        workspace,
+        sessionHelper,
+        resolvedUnit,
+        element,
+      );
     }
     if (enclosingElement?.thisOrAncestorOfType<InterfaceElement>()
         case var enclosingElement?) {
@@ -511,15 +521,26 @@ abstract class RenameRefactoring implements Refactoring {
       }
     }
     if (element is FormalParameterElement) {
-      return RenameParameterRefactoringImpl(workspace, sessionHelper, element);
+      return RenameParameterRefactoringImpl(
+        workspace,
+        sessionHelper,
+        resolvedUnit,
+        element,
+      );
     }
     if (element is LocalElement) {
-      return RenameLocalRefactoringImpl(workspace, sessionHelper, element);
+      return RenameLocalRefactoringImpl(
+        workspace,
+        sessionHelper,
+        resolvedUnit,
+        element,
+      );
     }
     if (element is TypeParameterElement) {
       return RenameTypeParameterRefactoringImpl(
         workspace,
         sessionHelper,
+        resolvedUnit,
         element,
       );
     }

@@ -1164,7 +1164,7 @@ CompileTimeErrorCode:
       import 'a.dart';
       import 'b.dart';
 
-      void f([!C!] c1, [!C!] c2) {}
+      void f(A a, [!C!] c1, [!C!] c2) {}
       ```
 
       #### Common fixes
@@ -1175,7 +1175,7 @@ CompileTimeErrorCode:
       ```dart
       import 'a.dart';
 
-      void f(C c1, C c2) {}
+      void f(A a, C c1, C c2) {}
       ```
 
       If the name is still defined by more than one library, then add a `hide`
@@ -1185,7 +1185,7 @@ CompileTimeErrorCode:
       import 'a.dart' hide C;
       import 'b.dart';
 
-      void f(C c1, C c2) {}
+      void f(A a, C c1, C c2) {}
       ```
 
       If you must be able to reference more than one of these types, then add a
@@ -1196,7 +1196,7 @@ CompileTimeErrorCode:
       import 'a.dart' as a;
       import 'b.dart' as b;
 
-      void f(a.C c1, b.C c2) {}
+      void f(a.A a, a.C c1, b.C c2) {}
       ```
   ambiguousSetOrMapLiteralBoth:
     type: compileTimeError
@@ -2210,7 +2210,8 @@ CompileTimeErrorCode:
       as a type because it's a built-in identifier:
 
       ```dart
-      [!import!]<int> x;
+      %ignore=undefined_class
+      [!import!]<int> x = [];
       ```
 
       #### Common fixes
@@ -2218,7 +2219,7 @@ CompileTimeErrorCode:
       Replace the built-in identifier with the name of a valid type:
 
       ```dart
-      List<int> x;
+      List<int> x = [];
       ```
   builtInIdentifierAsExtensionName:
     type: compileTimeError
@@ -2574,8 +2575,8 @@ CompileTimeErrorCode:
 
       #### Example
 
-      The following code produces this diagnostic because the class `A`, which
-      defines a generative constructor, is being used as a mixin:
+      The following code produces the diagnostic because class `A`
+      defines a generative constructor and is used as a mixin:
 
       ```dart
       //@dart=2.19
@@ -2662,6 +2663,7 @@ CompileTimeErrorCode:
       isn't marked as being `const`:
 
       ```dart
+      %language=3.10
       enum E {
         e;
 
@@ -3562,7 +3564,7 @@ CompileTimeErrorCode:
       ```dart
       import 'dart:convert' deferred as convert;
 
-      const json2 = [!convert.JsonCodec()!];
+      const json2 = [!convert.JsonCodec!]();
       ```
 
       #### Common fixes
@@ -5826,7 +5828,8 @@ CompileTimeErrorCode:
       internal library:
 
       ```dart
-      export [!'dart:_interceptors'!];
+      %ignore=uri_does_not_exist
+      [!export 'dart:_interceptors';!]
       ```
 
       #### Common fixes
@@ -6092,9 +6095,8 @@ CompileTimeErrorCode:
       field:
 
       ```dart
-      %language=2.9
       extension E on String {
-        String [!s!];
+        String [!s!] = '';
       }
       ```
 
@@ -6106,8 +6108,6 @@ CompileTimeErrorCode:
       ```dart
       extension E on String {
         String get s => '';
-
-        void s(String value) => print(s);
       }
       ```
 
@@ -6124,7 +6124,7 @@ CompileTimeErrorCode:
       using a getter and setter pair backed by a static `Expando`:
 
       ```dart
-      extension E on SomeType {
+      extension E on String {
         static final _s = Expando<String>();
 
         String get s => _s[this] ?? '';
@@ -7842,6 +7842,7 @@ CompileTimeErrorCode:
       `num` isn't a subtype of `int`:
 
       ```dart
+      // @dart = 3.8
       class C {
         num get [!x!] => 0;
 
@@ -8410,6 +8411,7 @@ CompileTimeErrorCode:
       internal library:
 
       ```dart
+      %ignore=uri_does_not_exist
       import [!'dart:_interceptors'!];
       ```
 
@@ -11582,6 +11584,94 @@ CompileTimeErrorCode:
 
       Depending on the members of the subclass this might require adding an `on`
       clause to the mixin.
+  mixinClassDeclarationWithClause:
+    type: compileTimeError
+    parameters:
+      String name: the name of the mixin class
+    problemMessage: "The class '#name' can't be declared a mixin because it has a 'with' clause."
+    correctionMessage: Try removing the 'with' clause or removing the 'mixin' modifier from the class.
+    hasPublishedDocs: false
+    documentation: |-
+      #### Description
+
+      The analyzer produces this diagnostic when a class with the `mixin`
+      modifier has a `with` clause. A mixin class declaration cannot have a
+      `with` clause because that implies it extends a class other than `Object`.
+
+      #### Example
+
+      The following code produces this diagnostic because the `mixin class` `B`
+      has a `with` clause:
+
+      ```dart
+      mixin M {}
+
+      mixin class B [!with M!] {}
+      ```
+
+      #### Common fixes
+
+      If you want to use the class as a mixin, remove the `with` clause:
+
+      ```dart
+      mixin M {}
+
+      mixin class B {}
+      ```
+
+      If you need the class to have a `with` clause, then remove the `mixin`
+      modifier:
+
+      ```dart
+      mixin M {}
+
+      class B with M {}
+      ```
+  mixinModifierMixinApplicationClassWithMultipleMixins:
+    type: compileTimeError
+    parameters:
+      String name: the name of the mixin class
+    problemMessage: "The mixin application class '#name' can only have a single mixin."
+    correctionMessage: Try removing all but one mixin.
+    hasPublishedDocs: false
+    documentation: |-
+      #### Description
+
+      The analyzer produces this diagnostic when a mixin application class
+      with the `mixin` modifier has more than one mixin. A mixin class
+      application can only have a single mixin.
+
+      #### Example
+
+      The following code produces this diagnostic because the `mixin class C`
+      has multiple mixins:
+
+      ```dart
+      mixin M1 {}
+      mixin M2 {}
+
+      mixin class C = Object [!with M1, M2!];
+      ```
+
+      #### Common fixes
+
+      If you need to use multiple mixins, remove the `mixin` modifier from the
+      mixin application class:
+
+      ```dart
+      mixin M1 {}
+      mixin M2 {}
+
+      class C = Object with M1, M2;
+      ```
+
+      If you need the class to be a `mixin class`, then only use a single mixin:
+
+      ```dart
+      mixin M1 {}
+
+      mixin class C = Object with M1;
+      ```
   mixinClassDeclaresConstructor:
     type: compileTimeError
     parameters:
@@ -13253,6 +13343,7 @@ CompileTimeErrorCode:
       constructor is marked with `async`:
 
       ```dart
+      %ignore=invalid_modifier_on_constructor
       class C {
         factory C() [!async!] {
           return C._();
@@ -14411,6 +14502,7 @@ CompileTimeErrorCode:
       directive with an import directive:
 
       ```dart
+      %ignore=unused_import
       import 'a.dart';
       ```
   partOfUnnamedLibrary:
@@ -14892,9 +14984,10 @@ CompileTimeErrorCode:
       import prefix and the name of a function:
 
       ```dart
-      import 'dart:math' as f;
+      %ignore=undefined_method,unused_import
+      import 'dart:math' as [!f!];
 
-      int [!f!]() => f.min(0, 1);
+      int f() => f.min(0, 1);
       ```
 
       #### Common fixes
@@ -15922,6 +16015,7 @@ CompileTimeErrorCode:
 
       ```dart
       %language=2.9
+      %ignore=not_assigned_potentially_non_nullable_local_variable
       void f() {
         print([!i!]);
         int i = 5;
@@ -18704,6 +18798,7 @@ CompileTimeErrorCode:
       `async` keyword:
 
       ```dart
+      %ignore=unused_local_variable
       void f(p) { [!await!] p; }
       ```
 
@@ -19782,8 +19877,9 @@ CompileTimeErrorCode:
       modifier:
 
       ```dart
+      %ignore=illegal_async_return_type
       Stream<int> get digits async {
-        yield* [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        [!yield* [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];!]
       }
       ```
 
@@ -23300,6 +23396,7 @@ ParserErrorCode:
       `_x` starts with an underscore:
 
       ```dart
+      // @dart=3.11
       class C {
         void m({int [!_x!] = 0}) {}
       }
@@ -24485,6 +24582,7 @@ StaticWarningCode:
       The following code produces this diagnostic because `x` can't be `null`:
 
       ```dart
+      %ignore=dead_code
       int f(int x) {
         return x ?? [!0!];
       }
@@ -24493,6 +24591,7 @@ StaticWarningCode:
       The following code produces this diagnostic because `f` can't be `null`:
 
       ```dart
+      %ignore=dead_code
       class C {
         int f = -1;
 
@@ -28443,6 +28542,7 @@ WarningCode:
       function `g` isn't a constant:
 
       ```dart
+      %ignore=experimental_member_use
       import 'package:meta/meta.dart' show mustBeConst;
 
       int f(int value) => g([!value!]);
@@ -28456,6 +28556,7 @@ WarningCode:
       with a constant:
 
       ```dart
+      %ignore=experimental_member_use
       import 'package:meta/meta.dart' show mustBeConst;
 
       const v = 3;
@@ -30242,6 +30343,7 @@ WarningCode:
       `null`, so the comparison always evaluates to `false`:
 
       ```dart
+      %ignore=dead_code
       void f(int x) {
         if (x [!== null!]) {
           throw ArgumentError("x can't be null");

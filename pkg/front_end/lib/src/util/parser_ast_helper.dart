@@ -272,7 +272,6 @@ abstract class AbstractParserAstListener implements Listener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -285,7 +284,6 @@ abstract class AbstractParserAstListener implements Listener {
       ParserAstType.BEGIN,
       begin: begin,
       abstractToken: abstractToken,
-      macroToken: macroToken,
       sealedToken: sealedToken,
       baseToken: baseToken,
       interfaceToken: interfaceToken,
@@ -1353,7 +1351,6 @@ abstract class AbstractParserAstListener implements Listener {
   void beginNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -1366,7 +1363,6 @@ abstract class AbstractParserAstListener implements Listener {
       ParserAstType.BEGIN,
       beginToken: beginToken,
       abstractToken: abstractToken,
-      macroToken: macroToken,
       sealedToken: sealedToken,
       baseToken: baseToken,
       interfaceToken: interfaceToken,
@@ -1521,11 +1517,10 @@ abstract class AbstractParserAstListener implements Listener {
   }
 
   @override
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     ImportEnd data = new ImportEnd(
       ParserAstType.END,
       importKeyword: importKeyword,
-      augmentToken: augmentToken,
       semicolon: semicolon,
     );
     seen(data);
@@ -2381,8 +2376,8 @@ abstract class AbstractParserAstListener implements Listener {
   @override
   void beginFields(
     DeclarationKind declarationKind,
-    Token? abstractToken,
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2393,8 +2388,8 @@ abstract class AbstractParserAstListener implements Listener {
     FieldsBegin data = new FieldsBegin(
       ParserAstType.BEGIN,
       declarationKind: declarationKind,
-      abstractToken: abstractToken,
       augmentToken: augmentToken,
+      abstractToken: abstractToken,
       externalToken: externalToken,
       staticToken: staticToken,
       covariantToken: covariantToken,
@@ -2408,6 +2403,7 @@ abstract class AbstractParserAstListener implements Listener {
   @override
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -2420,6 +2416,7 @@ abstract class AbstractParserAstListener implements Listener {
     TopLevelFieldsEnd data = new TopLevelFieldsEnd(
       ParserAstType.END,
       augmentToken: augmentToken,
+      abstractToken: abstractToken,
       externalToken: externalToken,
       staticToken: staticToken,
       covariantToken: covariantToken,
@@ -4415,7 +4412,6 @@ class ClassOrMixinOrNamedMixinApplicationPreludeBegin extends ParserAstNode {
 class ClassDeclarationBegin extends ParserAstNode {
   final Token begin;
   final Token? abstractToken;
-  final Token? macroToken;
   final Token? sealedToken;
   final Token? baseToken;
   final Token? interfaceToken;
@@ -4428,7 +4424,6 @@ class ClassDeclarationBegin extends ParserAstNode {
     ParserAstType type, {
     required this.begin,
     this.abstractToken,
-    this.macroToken,
     this.sealedToken,
     this.baseToken,
     this.interfaceToken,
@@ -4442,7 +4437,6 @@ class ClassDeclarationBegin extends ParserAstNode {
   Map<String, Object?> get deprecatedArguments => {
     "begin": begin,
     "abstractToken": abstractToken,
-    "macroToken": macroToken,
     "sealedToken": sealedToken,
     "baseToken": baseToken,
     "interfaceToken": interfaceToken,
@@ -6205,7 +6199,6 @@ class MixinWithClauseHandle extends ParserAstNode {
 class NamedMixinApplicationBegin extends ParserAstNode {
   final Token beginToken;
   final Token? abstractToken;
-  final Token? macroToken;
   final Token? sealedToken;
   final Token? baseToken;
   final Token? interfaceToken;
@@ -6218,7 +6211,6 @@ class NamedMixinApplicationBegin extends ParserAstNode {
     ParserAstType type, {
     required this.beginToken,
     this.abstractToken,
-    this.macroToken,
     this.sealedToken,
     this.baseToken,
     this.interfaceToken,
@@ -6232,7 +6224,6 @@ class NamedMixinApplicationBegin extends ParserAstNode {
   Map<String, Object?> get deprecatedArguments => {
     "beginToken": beginToken,
     "abstractToken": abstractToken,
-    "macroToken": macroToken,
     "sealedToken": sealedToken,
     "baseToken": baseToken,
     "interfaceToken": interfaceToken,
@@ -6498,20 +6489,14 @@ class ImportPrefixHandle extends ParserAstNode {
 
 class ImportEnd extends ParserAstNode {
   final Token importKeyword;
-  final Token? augmentToken;
   final Token? semicolon;
 
-  ImportEnd(
-    ParserAstType type, {
-    required this.importKeyword,
-    this.augmentToken,
-    this.semicolon,
-  }) : super("Import", type);
+  ImportEnd(ParserAstType type, {required this.importKeyword, this.semicolon})
+    : super("Import", type);
 
   @override
   Map<String, Object?> get deprecatedArguments => {
     "importKeyword": importKeyword,
-    "augmentToken": augmentToken,
     "semicolon": semicolon,
   };
 
@@ -7982,8 +7967,8 @@ class TopLevelMemberBegin extends ParserAstNode {
 
 class FieldsBegin extends ParserAstNode {
   final DeclarationKind declarationKind;
-  final Token? abstractToken;
   final Token? augmentToken;
+  final Token? abstractToken;
   final Token? externalToken;
   final Token? staticToken;
   final Token? covariantToken;
@@ -7994,8 +7979,8 @@ class FieldsBegin extends ParserAstNode {
   FieldsBegin(
     ParserAstType type, {
     required this.declarationKind,
-    this.abstractToken,
     this.augmentToken,
+    this.abstractToken,
     this.externalToken,
     this.staticToken,
     this.covariantToken,
@@ -8007,8 +7992,8 @@ class FieldsBegin extends ParserAstNode {
   @override
   Map<String, Object?> get deprecatedArguments => {
     "declarationKind": declarationKind,
-    "abstractToken": abstractToken,
     "augmentToken": augmentToken,
+    "abstractToken": abstractToken,
     "externalToken": externalToken,
     "staticToken": staticToken,
     "covariantToken": covariantToken,
@@ -8024,6 +8009,7 @@ class FieldsBegin extends ParserAstNode {
 class TopLevelFieldsEnd extends ParserAstNode
     implements BeginAndEndTokenParserAstNode {
   final Token? augmentToken;
+  final Token? abstractToken;
   final Token? externalToken;
   final Token? staticToken;
   final Token? covariantToken;
@@ -8038,6 +8024,7 @@ class TopLevelFieldsEnd extends ParserAstNode
   TopLevelFieldsEnd(
     ParserAstType type, {
     this.augmentToken,
+    this.abstractToken,
     this.externalToken,
     this.staticToken,
     this.covariantToken,
@@ -8051,6 +8038,7 @@ class TopLevelFieldsEnd extends ParserAstNode
   @override
   Map<String, Object?> get deprecatedArguments => {
     "augmentToken": augmentToken,
+    "abstractToken": abstractToken,
     "externalToken": externalToken,
     "staticToken": staticToken,
     "covariantToken": covariantToken,

@@ -150,7 +150,6 @@ abstract class Listener implements UnescapeErrorListener {
   void beginClassDeclaration(
     Token begin,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -881,7 +880,6 @@ abstract class Listener implements UnescapeErrorListener {
   void beginNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -977,7 +975,7 @@ abstract class Listener implements UnescapeErrorListener {
   /// - conditional uris
   /// - prefix identifier
   /// - combinators
-  void endImport(Token importKeyword, Token? augmentToken, Token? semicolon) {
+  void endImport(Token importKeyword, Token? semicolon) {
     logEvent("Import");
   }
 
@@ -1452,8 +1450,8 @@ abstract class Listener implements UnescapeErrorListener {
   /// Note that this is ended with [endTopLevelFields] or [endFields].
   void beginFields(
     DeclarationKind declarationKind,
-    Token? abstractToken,
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,
@@ -1472,6 +1470,7 @@ abstract class Listener implements UnescapeErrorListener {
   /// Started by [beginFields].
   void endTopLevelFields(
     Token? augmentToken,
+    Token? abstractToken,
     Token? externalToken,
     Token? staticToken,
     Token? covariantToken,

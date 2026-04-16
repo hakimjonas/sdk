@@ -34,6 +34,7 @@ import 'package:analyzer/src/dart/element/class_hierarchy.dart';
 import 'package:analyzer/src/dart/element/display_string_builder.dart';
 import 'package:analyzer/src/dart/element/field_name_non_promotability_info.dart';
 import 'package:analyzer/src/dart/element/inheritance_manager3.dart';
+import 'package:analyzer/src/dart/element/member.dart';
 import 'package:analyzer/src/dart/element/name_union.dart';
 import 'package:analyzer/src/dart/element/scope.dart';
 import 'package:analyzer/src/dart/element/since_sdk_version.dart';
@@ -61,9 +62,11 @@ import 'package:analyzer/src/utilities/extensions/collection.dart';
 import 'package:analyzer/src/utilities/extensions/element.dart';
 import 'package:analyzer/src/utilities/extensions/object.dart';
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:pub_semver/pub_semver.dart';
 
-part 'element.g.dart';
+/// Marker for declarations that are code generated.
+const generated = _Generated();
 
 class BindPatternVariableElementImpl extends PatternVariableElementImpl
     implements BindPatternVariableElement {
@@ -129,6 +132,7 @@ class BindPatternVariableFragmentImpl extends PatternVariableFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _ClassElementFlags.values)
 class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
   @override
   @trackedIncludedInId
@@ -141,12 +145,9 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
     reference.element = this;
     _firstFragment.element = this;
 
-    isAbstract = _firstFragment.isAbstract;
     isBase = _firstFragment.isBase;
     isFinal = _firstFragment.isFinal;
     isInterface = _firstFragment.isInterface;
-    isMixinClass = _firstFragment.isMixinClass;
-    isSealed = _firstFragment.isSealed;
   }
 
   /// If we can find all possible subtypes of this class, return them.
@@ -269,6 +270,23 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isAbstract': isAbstract,
+      'isBase': isBase,
+      'isFinal': isFinal,
+      'isInterface': isInterface,
+      'isMixinApplication': isMixinApplication,
+      'isMixinClass': isMixinClass,
+      'isSealed': isSealed,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<ClassFragmentImpl> get fragments {
@@ -285,24 +303,27 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
     return constructors.any((c) => !c.isFactory && c.isConst);
   }
 
+  /// Whether the executable element is abstract.
+  ///
+  /// Executable elements are abstract if they are not external, and have no
+  /// body.
+  @generated
   @override
   @trackedIncludedInId
   bool get isAbstract {
-    return hasModifier(Modifier.ABSTRACT);
+    return _firstFragment.isAbstract;
   }
 
-  set isAbstract(bool isAbstract) {
-    setModifier(Modifier.ABSTRACT, isAbstract);
-  }
-
+  @generated
   @override
   @trackedIncludedInId
   bool get isBase {
-    return hasModifier(Modifier.BASE);
+    return hasFlag(_ElementStorageFlag.classElement_isBase);
   }
 
-  set isBase(bool isBase) {
-    setModifier(Modifier.BASE, isBase);
+  @generated
+  set isBase(bool value) {
+    setFlag(_ElementStorageFlag.classElement_isBase, value);
   }
 
   @override
@@ -340,28 +361,32 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
   @trackedIncludedInId
   bool get isExtendableOutside => !isInterface && !isFinal && !isSealed;
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isFinal {
-    return hasModifier(Modifier.FINAL);
+    return hasFlag(_ElementStorageFlag.classElement_isFinal);
   }
 
-  set isFinal(bool isFinal) {
-    setModifier(Modifier.FINAL, isFinal);
+  @generated
+  set isFinal(bool value) {
+    setFlag(_ElementStorageFlag.classElement_isFinal, value);
   }
 
   @override
   @trackedIncludedInId
   bool get isImplementableOutside => !isBase && !isFinal && !isSealed;
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isInterface {
-    return hasModifier(Modifier.INTERFACE);
+    return hasFlag(_ElementStorageFlag.classElement_isInterface);
   }
 
-  set isInterface(bool isInterface) {
-    setModifier(Modifier.INTERFACE, isInterface);
+  @generated
+  set isInterface(bool value) {
+    setFlag(_ElementStorageFlag.classElement_isInterface, value);
   }
 
   @override
@@ -373,30 +398,25 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
     return true;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isMixinApplication {
     return _firstFragment.isMixinApplication;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isMixinClass {
-    return hasModifier(Modifier.MIXIN_CLASS);
+    return _firstFragment.isMixinClass;
   }
 
-  set isMixinClass(bool isMixinClass) {
-    setModifier(Modifier.MIXIN_CLASS, isMixinClass);
-  }
-
+  @generated
   @override
   @trackedIncludedInId
   bool get isSealed {
-    return hasModifier(Modifier.SEALED);
-  }
-
-  set isSealed(bool isSealed) {
-    setModifier(Modifier.SEALED, isSealed);
+    return _firstFragment.isSealed;
   }
 
   @override
@@ -511,6 +531,8 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
             .getChild(constructorFragment.name),
         firstFragment: constructorFragment,
       );
+      constructorElement.hasEnclosingTypeParameterReference =
+          typeParameters.isNotEmpty;
       constructorElement.superConstructor = superConstructor;
       // TODO(scheglov): make it explicit
       // constructorElement.enclosingElement = this;
@@ -532,7 +554,7 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
 
         formalParameterFragment.isConst = superFormalParameter.isConst;
         formalParameterFragment.isFinal = superFormalParameter.isFinal;
-        formalParameterFragment.isSynthetic = true;
+        formalParameterFragment.isOriginMixinApplicationClassConstructor = true;
         formalParameterFragments.add(formalParameterFragment);
 
         var formalParameterElement = FormalParameterElementImpl(
@@ -590,16 +612,116 @@ class ClassElementImpl extends InterfaceElementImpl implements ClassElement {
 }
 
 /// An [InterfaceFragmentImpl] which is a class.
-@GenerateFragmentImpl(modifiers: _ClassFragmentImplModifiers.values)
-class ClassFragmentImpl extends InterfaceFragmentImpl
-    with _ClassFragmentImplMixin
-    implements ClassFragment {
+@GenerateElementFlags(flags: _ClassElementFlags.values)
+class ClassFragmentImpl extends InterfaceFragmentImpl implements ClassFragment {
   @override
   late final ClassElementImpl element;
 
   /// Initialize a newly created class element to have the given [name] at the
   /// given [offset] in the file that contains the declaration of this element.
   ClassFragmentImpl({required super.name});
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasExtendsClause': hasExtendsClause,
+      'isAbstract': isAbstract,
+      'isBase': isBase,
+      'isFinal': isFinal,
+      'isInterface': isInterface,
+      'isMixinApplication': isMixinApplication,
+      'isMixinClass': isMixinClass,
+      'isSealed': isSealed,
+    };
+  }
+
+  @generated
+  bool get hasExtendsClause {
+    return hasFlag(_FragmentStorageFlag.classFragment_hasExtendsClause);
+  }
+
+  @generated
+  set hasExtendsClause(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_hasExtendsClause, value);
+  }
+
+  /// Whether the executable element is abstract.
+  ///
+  /// Executable elements are abstract if they are not external, and have no
+  /// body.
+  @generated
+  bool get isAbstract {
+    return hasFlag(_FragmentStorageFlag.classFragment_isAbstract);
+  }
+
+  @generated
+  set isAbstract(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isAbstract, value);
+  }
+
+  @generated
+  bool get isBase {
+    return hasFlag(_FragmentStorageFlag.classFragment_isBase);
+  }
+
+  @generated
+  set isBase(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isBase, value);
+  }
+
+  @generated
+  bool get isFinal {
+    return hasFlag(_FragmentStorageFlag.classFragment_isFinal);
+  }
+
+  @generated
+  set isFinal(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isFinal, value);
+  }
+
+  @generated
+  bool get isInterface {
+    return hasFlag(_FragmentStorageFlag.classFragment_isInterface);
+  }
+
+  @generated
+  set isInterface(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isInterface, value);
+  }
+
+  @generated
+  bool get isMixinApplication {
+    return hasFlag(_FragmentStorageFlag.classFragment_isMixinApplication);
+  }
+
+  @generated
+  set isMixinApplication(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isMixinApplication, value);
+  }
+
+  @generated
+  bool get isMixinClass {
+    return hasFlag(_FragmentStorageFlag.classFragment_isMixinClass);
+  }
+
+  @generated
+  set isMixinClass(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isMixinClass, value);
+  }
+
+  @generated
+  bool get isSealed {
+    return hasFlag(_FragmentStorageFlag.classFragment_isSealed);
+  }
+
+  @generated
+  set isSealed(bool value) {
+    setFlag(_FragmentStorageFlag.classFragment_isSealed, value);
+  }
 
   @override
   ClassFragmentImpl? get nextFragment {
@@ -627,6 +749,7 @@ class ConstantInitializerImpl {
 }
 
 @elementClass
+@GenerateElementFlags(flags: _ConstructorElementFlags.values)
 class ConstructorElementImpl extends ExecutableElementImpl
     with InternalConstructorElement
     implements ConstantEvaluationTarget {
@@ -711,6 +834,22 @@ class ConstructorElementImpl extends ExecutableElementImpl
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isConst': isConst,
+      'isFactory': isFactory,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginImplicitDefault': isOriginImplicitDefault,
+      'isOriginMixinApplication': isOriginMixinApplication,
+      'isPrimary': isPrimary,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<ConstructorFragmentImpl> get fragments {
@@ -722,37 +861,55 @@ class ConstructorElementImpl extends ExecutableElementImpl
     return _fragments;
   }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isConst => _firstFragment.isConst;
+  bool get isConst {
+    return _firstFragment.isConst;
+  }
 
   @override
   @trackedIndirectly
   bool get isDefaultConstructor => _firstFragment.isDefaultConstructor;
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isFactory => _firstFragment.isFactory;
+  bool get isFactory {
+    return _firstFragment.isFactory;
+  }
 
   @override
   @trackedIndirectly
   bool get isGenerative => !isFactory;
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginDeclaration => _firstFragment.isOriginDeclaration;
+  bool get isOriginDeclaration {
+    return _firstFragment.isOriginDeclaration;
+  }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginImplicitDefault => _firstFragment.isOriginImplicitDefault;
+  bool get isOriginImplicitDefault {
+    return _firstFragment.isOriginImplicitDefault;
+  }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginMixinApplication => _firstFragment.isOriginMixinApplication;
+  bool get isOriginMixinApplication {
+    return _firstFragment.isOriginMixinApplication;
+  }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isPrimary => _firstFragment.isPrimary;
+  bool get isPrimary {
+    return _firstFragment.isPrimary;
+  }
 
   @override
   @trackedIncludedInId
@@ -878,6 +1035,18 @@ class ConstructorElementImpl extends ExecutableElementImpl
   }
 
   @override
+  @trackedIndirectly
+  InternalConstructorElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    return SubstitutedConstructorElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
+
+  @override
   @trackedDirectlyOpaque
   void visitChildren<T>(ElementVisitor2<T> visitor) {
     globalResultRequirements?.recordOpaqueApiUse(
@@ -892,9 +1061,8 @@ class ConstructorElementImpl extends ExecutableElementImpl
 }
 
 /// A concrete implementation of a [ConstructorFragment].
-@GenerateFragmentImpl(modifiers: _ConstructorFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _ConstructorElementFlags.values)
 class ConstructorFragmentImpl extends ExecutableFragmentImpl
-    with _ConstructorFragmentImplMixin
     implements ConstructorFragment {
   late final ConstructorElementImpl element;
 
@@ -965,6 +1133,32 @@ class ConstructorFragmentImpl extends ExecutableFragmentImpl
   InterfaceFragmentImpl get enclosingFragment =>
       super.enclosingFragment as InterfaceFragmentImpl;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isConst': isConst,
+      'isFactory': isFactory,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginImplicitDefault': isOriginImplicitDefault,
+      'isOriginMixinApplication': isOriginMixinApplication,
+      'isPrimary': isPrimary,
+    };
+  }
+
+  @generated
+  bool get isConst {
+    return hasFlag(_FragmentStorageFlag.constructorFragment_isConst);
+  }
+
+  @generated
+  set isConst(bool value) {
+    setFlag(_FragmentStorageFlag.constructorFragment_isConst, value);
+  }
+
   /// Whether the constructor can be used as a default constructor - unnamed,
   /// and has no required parameters.
   bool get isDefaultConstructor {
@@ -982,9 +1176,74 @@ class ConstructorFragmentImpl extends ExecutableFragmentImpl
     return true;
   }
 
+  @generated
+  bool get isFactory {
+    return hasFlag(_FragmentStorageFlag.constructorFragment_isFactory);
+  }
+
+  @generated
+  set isFactory(bool value) {
+    setFlag(_FragmentStorageFlag.constructorFragment_isFactory, value);
+  }
+
   /// Whether the constructor represents a generative constructor.
   bool get isGenerative {
     return !isFactory;
+  }
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginDeclaration,
+    );
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginDeclaration,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginImplicitDefault {
+    return hasFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginImplicitDefault,
+    );
+  }
+
+  @generated
+  set isOriginImplicitDefault(bool value) {
+    setFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginImplicitDefault,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginMixinApplication {
+    return hasFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginMixinApplication,
+    );
+  }
+
+  @generated
+  set isOriginMixinApplication(bool value) {
+    setFlag(
+      _FragmentStorageFlag.constructorFragment_isOriginMixinApplication,
+      value,
+    );
+  }
+
+  @generated
+  bool get isPrimary {
+    return hasFlag(_FragmentStorageFlag.constructorFragment_isPrimary);
+  }
+
+  @generated
+  set isPrimary(bool value) {
+    setFlag(_FragmentStorageFlag.constructorFragment_isPrimary, value);
   }
 
   @override
@@ -1215,9 +1474,7 @@ class DynamicFragmentImpl extends FragmentImpl {
   /// should <b>not</b> be created except as part of creating the type
   /// associated with this element. The single instance of this class should be
   /// accessed through the method [instance].
-  DynamicFragmentImpl._() : super(firstTokenOffset: null) {
-    isSynthetic = true;
-  }
+  DynamicFragmentImpl._() : super(firstTokenOffset: null);
 
   @override
   List<Fragment> get children => const [];
@@ -1322,6 +1579,9 @@ class ElementAnnotationImpl
 
   /// The name of `_js_annotations` library, used to define JS annotations.
   static const String _jsLibName = '_js_annotations';
+
+  /// The URI of `dart:js_interop` library.
+  static const String _jsInteropLibUri = 'dart:js_interop';
 
   /// The name of `meta` library, used to define analysis annotations.
   static const String _metaLibName = 'meta';
@@ -1519,7 +1779,8 @@ class ElementAnnotationImpl
 
   @override
   bool get isJS =>
-      _isConstructor(libraryName: _jsLibName, className: _jsClassName);
+      _isConstructor(libraryName: _jsLibName, className: _jsClassName) ||
+      _isConstructor(libraryUri: _jsInteropLibUri, className: _jsClassName);
 
   @override
   bool get isLiteral => _isPackageMetaGetter(_literalVariableName);
@@ -1642,13 +1903,19 @@ class ElementAnnotationImpl
   String toString() => '@$element';
 
   bool _isConstructor({
-    required String libraryName,
+    String? libraryName,
+    String? libraryUri,
     required String className,
   }) {
+    assert(
+      (libraryName != null) != (libraryUri != null),
+      'Exactly one of libraryName/libraryUri should be provided',
+    );
     var element = this.element;
     return element is ConstructorElement &&
         element.enclosingElement.name == className &&
-        element.library.name == libraryName;
+        (libraryName == null || element.library.name == libraryName) &&
+        (libraryUri == null || element.library.uri.toString() == libraryUri);
   }
 
   bool _isDartCoreGetter(String name) {
@@ -1704,12 +1971,14 @@ sealed class ElementDirectiveImpl implements ElementDirective {
 }
 
 @elementClass
+@GenerateElementFlags(flags: _ElementFlags.values)
 abstract class ElementImpl implements Element {
   /// Cached values for [sinceSdkVersion].
   ///
   /// Only very few elements have `@Since()` annotations, so instead of adding
   /// an instance field to [ElementImpl], we attach this information this way.
-  /// We ask it only when [Modifier.HAS_SINCE_SDK_VERSION_VALUE] is `true`, so
+  /// We ask it only when [_ElementStorageFlag.element_hasSinceSdkVersionValue]
+  /// is `true`, so
   /// don't pay for a hash lookup when we know that the result is `null`.
   static final Expando<Version> _sinceSdkVersion = Expando<Version>();
 
@@ -1717,8 +1986,8 @@ abstract class ElementImpl implements Element {
   @trackedIncludedInId
   final int id = FragmentImpl._NEXT_ID++;
 
-  /// The modifiers associated with this element.
-  EnumSet<Modifier> _modifiers = EnumSet.empty();
+  /// The flags associated with this element.
+  EnumSet<_ElementStorageFlag> _flags = EnumSet.empty();
 
   @override
   @trackedIncludedInId
@@ -1771,8 +2040,40 @@ abstract class ElementImpl implements Element {
     );
   }
 
+  @generated
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      'hasSinceSdkVersionComputed': hasSinceSdkVersionComputed,
+      'hasSinceSdkVersionValue': hasSinceSdkVersionValue,
+    };
+  }
+
   @override
   List<FragmentImpl> get fragments;
+
+  @generated
+  @trackedInternal
+  bool get hasSinceSdkVersionComputed {
+    return hasFlag(_ElementStorageFlag.element_hasSinceSdkVersionComputed);
+  }
+
+  @generated
+  set hasSinceSdkVersionComputed(bool value) {
+    setFlag(_ElementStorageFlag.element_hasSinceSdkVersionComputed, value);
+  }
+
+  @generated
+  @trackedInternal
+  bool get hasSinceSdkVersionValue {
+    return hasFlag(_ElementStorageFlag.element_hasSinceSdkVersionValue);
+  }
+
+  @generated
+  set hasSinceSdkVersionValue(bool value) {
+    setFlag(_ElementStorageFlag.element_hasSinceSdkVersionValue, value);
+  }
 
   @override
   @trackedIndirectly
@@ -1830,15 +2131,15 @@ abstract class ElementImpl implements Element {
   @override
   @trackedIndirectly
   Version? get sinceSdkVersion {
-    if (!hasModifier(Modifier.HAS_SINCE_SDK_VERSION_COMPUTED)) {
-      setModifier(Modifier.HAS_SINCE_SDK_VERSION_COMPUTED, true);
+    if (!hasSinceSdkVersionComputed) {
+      hasSinceSdkVersionComputed = true;
       var result = SinceSdkVersionComputer().compute(this);
       if (result != null) {
         _sinceSdkVersion[this] = result;
-        setModifier(Modifier.HAS_SINCE_SDK_VERSION_VALUE, true);
+        hasSinceSdkVersionValue = true;
       }
     }
-    if (hasModifier(Modifier.HAS_SINCE_SDK_VERSION_VALUE)) {
+    if (hasSinceSdkVersionValue) {
       return _sinceSdkVersion[this];
     }
     return null;
@@ -1881,9 +2182,9 @@ abstract class ElementImpl implements Element {
     return "$shortName (${source?.fullName})";
   }
 
-  /// Whether this element has the [modifier].
+  /// Whether this element has the [flag].
   @trackedIncludedInId
-  bool hasModifier(Modifier modifier) => _modifiers[modifier];
+  bool hasFlag(_ElementStorageFlag flag) => _flags[flag];
 
   @override
   @trackedIncludedInId
@@ -1902,14 +2203,14 @@ abstract class ElementImpl implements Element {
       .any((e) => e.deprecationKind == kind);
 
   @trackedInternal
-  void readModifiers(BinaryReader reader) {
-    _modifiers = EnumSet.read(reader);
+  void readFlags(BinaryReader reader) {
+    _flags = EnumSet.read(reader);
   }
 
-  /// Update [modifier] of this element to [value].
+  /// Update [flag] of this element to [value].
   @trackedInternal
-  void setModifier(Modifier modifier, bool value) {
-    _modifiers = _modifiers.updated(modifier, value);
+  void setFlag(_ElementStorageFlag flag, bool value) {
+    _flags = _flags.updated(flag, value);
   }
 
   @override
@@ -1956,8 +2257,8 @@ abstract class ElementImpl implements Element {
   }
 
   @trackedInternal
-  void writeModifiers(BinaryWriter writer) {
-    _modifiers.write(writer);
+  void writeFlags(BinaryWriter writer) {
+    _flags.write(writer);
   }
 }
 
@@ -2098,10 +2399,17 @@ class EnumFragmentImpl extends InterfaceFragmentImpl implements EnumFragment {
 }
 
 @elementClass
+@GenerateElementFlags(flags: _ExecutableElementFlags.values)
 abstract class ExecutableElementImpl extends FunctionTypedElementImpl
     with InternalExecutableElement, DeferredResolutionReadingMixin {
   TypeImpl? _returnType;
+
   FunctionTypeImpl? _type;
+
+  ExecutableElementImpl() {
+    // Conservative until finalized during linking.
+    hasEnclosingTypeParameterReference = true;
+  }
 
   @override
   @trackedIncludedInId
@@ -2118,6 +2426,21 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
   @override
   ExecutableFragmentImpl get firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasEnclosingTypeParameterReference': hasEnclosingTypeParameterReference,
+      'invokesSuperSelf': invokesSuperSelf,
+      'isExtensionTypeMember': isExtensionTypeMember,
+      'isExternal': isExternal,
+      'isStatic': isStatic,
+    };
+  }
+
   @override
   @trackedIncludedInId
   List<FormalParameterElementImpl> get formalParameters {
@@ -2133,19 +2456,20 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
   @override
   List<ExecutableFragmentImpl> get fragments;
 
-  /// Whether the type of this element references a type parameter of the
-  /// enclosing element. This includes not only explicitly specified type
-  /// annotations, but also inferred types.
-  ///
-  /// Top-level declarations don't have enclosing element type parameters,
-  /// so for them this flag is always `false`.
+  @generated
   @trackedIncludedInId
   bool get hasEnclosingTypeParameterReference {
-    return !hasModifier(Modifier.NO_ENCLOSING_TYPE_PARAMETER_REFERENCE);
+    return hasFlag(
+      _ElementStorageFlag.executableElement_hasEnclosingTypeParameterReference,
+    );
   }
 
+  @generated
   set hasEnclosingTypeParameterReference(bool value) {
-    setModifier(Modifier.NO_ENCLOSING_TYPE_PARAMETER_REFERENCE, !value);
+    setFlag(
+      _ElementStorageFlag.executableElement_hasEnclosingTypeParameterReference,
+      value,
+    );
   }
 
   @override
@@ -2159,9 +2483,10 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
     return true;
   }
 
+  @generated
   @trackedIncludedInId
   bool get invokesSuperSelf {
-    return _firstFragment.hasModifier(Modifier.INVOKES_SUPER_SELF);
+    return _firstFragment.invokesSuperSelf;
   }
 
   @override
@@ -2175,16 +2500,19 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
     return true;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isExtensionTypeMember {
-    return hasModifier(Modifier.EXTENSION_TYPE_MEMBER);
+    return hasFlag(_ElementStorageFlag.executableElement_isExtensionTypeMember);
   }
 
+  @generated
   set isExtensionTypeMember(bool value) {
-    setModifier(Modifier.EXTENSION_TYPE_MEMBER, value);
+    setFlag(_ElementStorageFlag.executableElement_isExtensionTypeMember, value);
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isExternal {
@@ -2195,6 +2523,7 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
   @trackedIncludedInId
   bool get isSimplyBounded => true;
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isStatic {
@@ -2284,11 +2613,17 @@ abstract class ExecutableElementImpl extends FunctionTypedElementImpl
   void appendTo(ElementDisplayStringBuilder builder) {
     builder.writeExecutableElement(this, name!);
   }
+
+  @override
+  @trackedIndirectly
+  InternalExecutableElement substitute(MapSubstitution substitution) {
+    throw StateError('substitute not supported for $runtimeType');
+  }
 }
 
-@GenerateFragmentImpl(modifiers: _ExecutableFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _ExecutableElementFlags.values)
 abstract class ExecutableFragmentImpl extends FunctionTypedFragmentImpl
-    with DeferredResolutionReadingMixin, _ExecutableFragmentImplMixin
+    with DeferredResolutionReadingMixin
     implements ExecutableFragment {
   List<TypeParameterFragmentImpl> _typeParameters = const [];
 
@@ -2311,6 +2646,23 @@ abstract class ExecutableFragmentImpl extends FunctionTypedFragmentImpl
     return super.enclosingFragment!;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasImplicitReturnType': hasImplicitReturnType,
+      'invokesSuperSelf': invokesSuperSelf,
+      'isAbstract': isAbstract,
+      'isAsynchronous': isAsynchronous,
+      'isExternal': isExternal,
+      'isGenerator': isGenerator,
+      'isStatic': isStatic,
+    };
+  }
+
   @override
   List<FormalParameterFragmentImpl> get formalParameters {
     _ensureReadResolution();
@@ -2324,11 +2676,94 @@ abstract class ExecutableFragmentImpl extends FunctionTypedFragmentImpl
     _formalParameters = formalParameters;
   }
 
+  @generated
+  bool get hasImplicitReturnType {
+    return hasFlag(
+      _FragmentStorageFlag.executableFragment_hasImplicitReturnType,
+    );
+  }
+
+  @generated
+  set hasImplicitReturnType(bool value) {
+    setFlag(
+      _FragmentStorageFlag.executableFragment_hasImplicitReturnType,
+      value,
+    );
+  }
+
+  @generated
+  bool get invokesSuperSelf {
+    return hasFlag(_FragmentStorageFlag.executableFragment_invokesSuperSelf);
+  }
+
+  @generated
+  set invokesSuperSelf(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_invokesSuperSelf, value);
+  }
+
+  /// Whether the executable element is abstract.
+  ///
+  /// Executable elements are abstract if they are not external, and have no
+  /// body.
+  @generated
+  bool get isAbstract {
+    return hasFlag(_FragmentStorageFlag.executableFragment_isAbstract);
+  }
+
+  @generated
+  set isAbstract(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_isAbstract, value);
+  }
+
+  @generated
+  @override
+  bool get isAsynchronous {
+    return hasFlag(_FragmentStorageFlag.executableFragment_isAsynchronous);
+  }
+
+  @generated
+  set isAsynchronous(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_isAsynchronous, value);
+  }
+
+  /// Executable elements are external if they are explicitly marked as such
+  /// using the 'external' keyword.
+  @generated
+  bool get isExternal {
+    return hasFlag(_FragmentStorageFlag.executableFragment_isExternal);
+  }
+
+  @generated
+  set isExternal(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_isExternal, value);
+  }
+
+  @generated
+  @override
+  bool get isGenerator {
+    return hasFlag(_FragmentStorageFlag.executableFragment_isGenerator);
+  }
+
+  @generated
+  set isGenerator(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_isGenerator, value);
+  }
+
   /// Whether the executable element is an operator.
   ///
   /// The test may be based on the name of the executable element, in which
   /// case the result will be correct when the name is legal.
   bool get isOperator => false;
+
+  @generated
+  bool get isStatic {
+    return hasFlag(_FragmentStorageFlag.executableFragment_isStatic);
+  }
+
+  @generated
+  set isStatic(bool value) {
+    setFlag(_FragmentStorageFlag.executableFragment_isStatic, value);
+  }
 
   @override
   bool get isSynchronous => !isAsynchronous;
@@ -2738,6 +3173,7 @@ class ExtensionTypeFragmentImpl extends InterfaceFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _FieldElementFlags.values)
 class FieldElementImpl extends PropertyInducingElementImpl
     with InternalFieldElement {
   @override
@@ -2753,6 +3189,8 @@ class FieldElementImpl extends PropertyInducingElementImpl
   }) : _firstFragment = firstFragment {
     reference.element = this;
     _firstFragment.element = this;
+    // Conservative until finalized during linking.
+    hasEnclosingTypeParameterReference = true;
   }
 
   @override
@@ -2804,6 +3242,23 @@ class FieldElementImpl extends PropertyInducingElementImpl
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasEnclosingTypeParameterReference': hasEnclosingTypeParameterReference,
+      'isEnumConstant': isEnumConstant,
+      'isOriginDeclaringFormalParameter': isOriginDeclaringFormalParameter,
+      'isOriginEnumValues': isOriginEnumValues,
+      'isOriginExtensionTypeRecoveryRepresentation':
+          isOriginExtensionTypeRecoveryRepresentation,
+      'isPromotable': isPromotable,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<FieldFragmentImpl> get fragments {
@@ -2826,83 +3281,68 @@ class FieldElementImpl extends PropertyInducingElementImpl
     return super.getter;
   }
 
-  /// Whether the type of this fragment references a type parameter of the
-  /// enclosing element. This includes not only explicitly specified type
-  /// annotations, but also inferred types.
+  @generated
   @trackedIncludedInId
   bool get hasEnclosingTypeParameterReference {
-    return !hasModifier(Modifier.NO_ENCLOSING_TYPE_PARAMETER_REFERENCE);
+    return hasFlag(
+      _ElementStorageFlag.fieldElement_hasEnclosingTypeParameterReference,
+    );
   }
 
+  @generated
   set hasEnclosingTypeParameterReference(bool value) {
-    setModifier(Modifier.NO_ENCLOSING_TYPE_PARAMETER_REFERENCE, !value);
+    setFlag(
+      _ElementStorageFlag.fieldElement_hasEnclosingTypeParameterReference,
+      value,
+    );
   }
-
-  @override
-  @trackedIncludedInId
-  bool get hasImplicitType => _firstFragment.hasImplicitType;
-
-  @override
-  @trackedIncludedInId
-  bool get isAbstract => _firstFragment.isAbstract;
-
-  @override
-  @trackedIncludedInId
-  bool get isConst => _firstFragment.isConst;
 
   @override
   @trackedIncludedInId
   bool get isCovariant => _firstFragment.isExplicitlyCovariant;
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isEnumConstant => _firstFragment.isEnumConstant;
+  bool get isEnumConstant {
+    return _firstFragment.isEnumConstant;
+  }
 
   @trackedIndirectly
   bool get isEnumValues {
     return enclosingElement is EnumElementImpl && name == 'values';
   }
 
-  @override
-  @trackedIncludedInId
-  bool get isExternal => _firstFragment.isExternal;
-
-  @override
-  @trackedIncludedInId
-  bool get isFinal => _firstFragment.isFinal;
-
   @trackedIndirectly
   bool get isInstanceField => !isStatic;
 
-  @override
-  @trackedIncludedInId
-  bool get isLate => _firstFragment.isLate;
-
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginDeclaringFormalParameter {
     return _firstFragment.isOriginDeclaringFormalParameter;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginEnumValues {
     return _firstFragment.isOriginEnumValues;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginExtensionTypeRecoveryRepresentation {
     return _firstFragment.isOriginExtensionTypeRecoveryRepresentation;
   }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isPromotable => _firstFragment.isPromotable;
-
-  @override
-  @trackedIncludedInId
-  bool get isStatic => _firstFragment.isStatic;
+  bool get isPromotable {
+    return _firstFragment.isPromotable;
+  }
 
   @override
   @trackedIncludedInId
@@ -2993,17 +3433,44 @@ class FieldElementImpl extends PropertyInducingElementImpl
       return current;
     });
   }
+
+  @override
+  @trackedIndirectly
+  InternalFieldElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    if (!hasEnclosingTypeParameterReference) {
+      return this;
+    }
+    return SubstitutedFieldElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
 }
 
+@GenerateElementFlags(flags: _FieldFormalParameterElementFlags.values)
 class FieldFormalParameterElementImpl extends FormalParameterElementImpl
-    implements FieldFormalParameterElement {
+    with InternalFieldFormalParameterElement {
   @override
   FieldElementImpl? field;
 
   FieldFormalParameterElementImpl(super.firstFragment);
 
   @override
+  FieldFormalParameterElementImpl get baseElement => this;
+
+  @override
   FieldFormalParameterFragmentImpl get firstFragment => _firstFragment;
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isDeclaring': isDeclaring};
+  }
 
   @override
   List<FieldFormalParameterFragmentImpl> get fragments {
@@ -3017,8 +3484,11 @@ class FieldFormalParameterElementImpl extends FormalParameterElementImpl
     ];
   }
 
+  @generated
   @override
-  bool get isDeclaring => _firstFragment.isDeclaring;
+  bool get isDeclaring {
+    return _firstFragment.isDeclaring;
+  }
 
   @override
   String? get privateName => _firstFragment.privateName;
@@ -3026,11 +3496,21 @@ class FieldFormalParameterElementImpl extends FormalParameterElementImpl
   @override
   FieldFormalParameterFragmentImpl get _firstFragment =>
       super._firstFragment as FieldFormalParameterFragmentImpl;
+
+  @override
+  InternalFieldFormalParameterElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    return SubstitutedFieldFormalParameterElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
 }
 
-@GenerateFragmentImpl(modifiers: _FieldFormalParameterFragmentModifiers.values)
+@GenerateElementFlags(flags: _FieldFormalParameterElementFlags.values)
 class FieldFormalParameterFragmentImpl extends FormalParameterFragmentImpl
-    with _FieldFormalParameterFragmentImplMixin
     implements FieldFormalParameterFragment {
   @override
   final String? privateName;
@@ -3048,6 +3528,29 @@ class FieldFormalParameterFragmentImpl extends FormalParameterFragmentImpl
   @override
   FieldFormalParameterElementImpl get element =>
       super.element as FieldFormalParameterElementImpl;
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isDeclaring': isDeclaring};
+  }
+
+  @generated
+  bool get isDeclaring {
+    return hasFlag(
+      _FragmentStorageFlag.fieldFormalParameterFragment_isDeclaring,
+    );
+  }
+
+  @generated
+  set isDeclaring(bool value) {
+    setFlag(
+      _FragmentStorageFlag.fieldFormalParameterFragment_isDeclaring,
+      value,
+    );
+  }
 
   /// Initializing formals are visible only in the "formal parameter
   /// initializer scope", which is the current scope of the initializer list
@@ -3077,9 +3580,8 @@ class FieldFormalParameterFragmentImpl extends FormalParameterFragmentImpl
   );
 }
 
-@GenerateFragmentImpl(modifiers: _FieldFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _FieldElementFlags.values)
 class FieldFragmentImpl extends PropertyInducingFragmentImpl
-    with _FieldFragmentImplMixin
     implements FieldFragment {
   /// True if this field inherits from a covariant parameter. This happens
   /// when it overrides a field in a supertype that is covariant.
@@ -3101,6 +3603,96 @@ class FieldFragmentImpl extends PropertyInducingFragmentImpl
   @override
   InstanceFragmentImpl get enclosingFragment {
     return super.enclosingFragment as InstanceFragmentImpl;
+  }
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isEnumConstant': isEnumConstant,
+      'isExplicitlyCovariant': isExplicitlyCovariant,
+      'isOriginDeclaringFormalParameter': isOriginDeclaringFormalParameter,
+      'isOriginEnumValues': isOriginEnumValues,
+      'isOriginExtensionTypeRecoveryRepresentation':
+          isOriginExtensionTypeRecoveryRepresentation,
+      'isPromotable': isPromotable,
+    };
+  }
+
+  @generated
+  bool get isEnumConstant {
+    return hasFlag(_FragmentStorageFlag.fieldFragment_isEnumConstant);
+  }
+
+  @generated
+  set isEnumConstant(bool value) {
+    setFlag(_FragmentStorageFlag.fieldFragment_isEnumConstant, value);
+  }
+
+  /// Whether the field was explicitly marked as being covariant.
+  @generated
+  bool get isExplicitlyCovariant {
+    return hasFlag(_FragmentStorageFlag.fieldFragment_isExplicitlyCovariant);
+  }
+
+  @generated
+  set isExplicitlyCovariant(bool value) {
+    setFlag(_FragmentStorageFlag.fieldFragment_isExplicitlyCovariant, value);
+  }
+
+  @generated
+  bool get isOriginDeclaringFormalParameter {
+    return hasFlag(
+      _FragmentStorageFlag.fieldFragment_isOriginDeclaringFormalParameter,
+    );
+  }
+
+  @generated
+  set isOriginDeclaringFormalParameter(bool value) {
+    setFlag(
+      _FragmentStorageFlag.fieldFragment_isOriginDeclaringFormalParameter,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginEnumValues {
+    return hasFlag(_FragmentStorageFlag.fieldFragment_isOriginEnumValues);
+  }
+
+  @generated
+  set isOriginEnumValues(bool value) {
+    setFlag(_FragmentStorageFlag.fieldFragment_isOriginEnumValues, value);
+  }
+
+  @generated
+  bool get isOriginExtensionTypeRecoveryRepresentation {
+    return hasFlag(
+      _FragmentStorageFlag
+          .fieldFragment_isOriginExtensionTypeRecoveryRepresentation,
+    );
+  }
+
+  @generated
+  set isOriginExtensionTypeRecoveryRepresentation(bool value) {
+    setFlag(
+      _FragmentStorageFlag
+          .fieldFragment_isOriginExtensionTypeRecoveryRepresentation,
+      value,
+    );
+  }
+
+  @generated
+  bool get isPromotable {
+    return hasFlag(_FragmentStorageFlag.fieldFragment_isPromotable);
+  }
+
+  @generated
+  set isPromotable(bool value) {
+    setFlag(_FragmentStorageFlag.fieldFragment_isPromotable, value);
   }
 
   @override
@@ -3142,6 +3734,7 @@ class FirstFragmentLocation {
   });
 }
 
+@GenerateElementFlags(flags: _FormalParameterElementFlags.values)
 class FormalParameterElementImpl extends PromotableElementImpl
     with InternalFormalParameterElement {
   @override
@@ -3190,6 +3783,18 @@ class FormalParameterElementImpl extends PromotableElementImpl
   @override
   FormalParameterFragmentImpl get firstFragment => _firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'hasDefaultValue': hasDefaultValue};
+  }
+
+  // firstFragment.typeParameters
+  //     .map((fragment) => (fragment as TypeParameterElementImpl).element)
+  //     .toList();
+
   @override
   // TODO(augmentations): Implement the merge of formal parameters.
   List<FormalParameterElementImpl> get formalParameters => _firstFragment
@@ -3207,14 +3812,6 @@ class FormalParameterElementImpl extends PromotableElementImpl
   bool get hasDefaultValue => defaultValueCode != null;
 
   @override
-  // TODO(augmentations): Implement the merge of formal parameters.
-  bool get hasImplicitType => _firstFragment.hasImplicitType;
-
-  @override
-  // TODO(augmentations): Implement the merge of formal parameters.
-  bool get isConst => _firstFragment.isConst;
-
-  @override
   bool get isCovariant {
     if (_firstFragment.isExplicitlyCovariant || inheritsCovariant) {
       return true;
@@ -3223,15 +3820,7 @@ class FormalParameterElementImpl extends PromotableElementImpl
   }
 
   @override
-  // TODO(augmentations): Implement the merge of formal parameters.
-  bool get isFinal => _firstFragment.isFinal;
-
-  @override
   bool get isInitializingFormal => _firstFragment.isInitializingFormal;
-
-  @override
-  // TODO(augmentations): Implement the merge of formal parameters.
-  bool get isLate => _firstFragment.isLate;
 
   @override
   bool get isNamed => _firstFragment.isNamed;
@@ -3256,10 +3845,6 @@ class FormalParameterElementImpl extends PromotableElementImpl
 
   @override
   bool get isRequiredPositional => _firstFragment.isRequiredPositional;
-
-  @override
-  // TODO(augmentations): Implement the merge of formal parameters.
-  bool get isStatic => _firstFragment.isStatic;
 
   @override
   // TODO(augmentations): Implement the merge of formal parameters.
@@ -3320,20 +3905,26 @@ class FormalParameterElementImpl extends PromotableElementImpl
   }
 
   @override
+  InternalFormalParameterElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    return SubstitutedFormalParameterElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
+
+  @override
   void visitChildren<T>(ElementVisitor2<T> visitor) {
     for (var child in children) {
       child.accept(visitor);
     }
   }
-
-  // firstFragment.typeParameters
-  //     .map((fragment) => (fragment as TypeParameterElementImpl).element)
-  //     .toList();
 }
 
-@GenerateFragmentImpl(modifiers: _FormalParameterFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _FormalParameterElementFlags.values)
 class FormalParameterFragmentImpl extends VariableFragmentImpl
-    with _FormalParameterFragmentImplMixin
     implements FormalParameterFragment {
   @override
   final String? name;
@@ -3389,7 +3980,6 @@ class FormalParameterFragmentImpl extends VariableFragmentImpl
       nameOffset: null,
       parameterKind: parameterKind,
     );
-    fragment.isSynthetic = true;
     return fragment;
   }
 
@@ -3414,6 +4004,22 @@ class FormalParameterFragmentImpl extends VariableFragmentImpl
 
   set element(FormalParameterElementImpl element) => _element = element;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isExplicitlyCovariant': isExplicitlyCovariant,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginMixinApplicationClassConstructor':
+          isOriginMixinApplicationClassConstructor,
+      'isOriginPreviousFragmentOfEnclosing':
+          isOriginPreviousFragmentOfEnclosing,
+    };
+  }
+
   /// The parameters defined by this parameter.
   ///
   /// A parameter will only define other parameters if it is a function typed
@@ -3429,6 +4035,22 @@ class FormalParameterFragmentImpl extends VariableFragmentImpl
       formalParameter.enclosingFragment = this;
     }
     _formalParameters = value;
+  }
+
+  /// Whether the field was explicitly marked as being covariant.
+  @generated
+  bool get isExplicitlyCovariant {
+    return hasFlag(
+      _FragmentStorageFlag.formalParameterFragment_isExplicitlyCovariant,
+    );
+  }
+
+  @generated
+  set isExplicitlyCovariant(bool value) {
+    setFlag(
+      _FragmentStorageFlag.formalParameterFragment_isExplicitlyCovariant,
+      value,
+    );
   }
 
   /// Whether the parameter is an initializing formal parameter.
@@ -3458,6 +4080,55 @@ class FormalParameterFragmentImpl extends VariableFragmentImpl
 
   /// Whether the parameter is both an optional and positional parameter.
   bool get isOptionalPositional => parameterKind.isOptionalPositional;
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(
+      _FragmentStorageFlag.formalParameterFragment_isOriginDeclaration,
+    );
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(
+      _FragmentStorageFlag.formalParameterFragment_isOriginDeclaration,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginMixinApplicationClassConstructor {
+    return hasFlag(
+      _FragmentStorageFlag
+          .formalParameterFragment_isOriginMixinApplicationClassConstructor,
+    );
+  }
+
+  @generated
+  set isOriginMixinApplicationClassConstructor(bool value) {
+    setFlag(
+      _FragmentStorageFlag
+          .formalParameterFragment_isOriginMixinApplicationClassConstructor,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginPreviousFragmentOfEnclosing {
+    return hasFlag(
+      _FragmentStorageFlag
+          .formalParameterFragment_isOriginPreviousFragmentOfEnclosing,
+    );
+  }
+
+  @generated
+  set isOriginPreviousFragmentOfEnclosing(bool value) {
+    setFlag(
+      _FragmentStorageFlag
+          .formalParameterFragment_isOriginPreviousFragmentOfEnclosing,
+      value,
+    );
+  }
 
   /// Whether the parameter is a positional parameter.
   ///
@@ -3568,8 +4239,8 @@ class FormalParameterFragmentImpl extends VariableFragmentImpl
   }
 }
 
-@GenerateFragmentImpl(modifiers: _FragmentImplModifiers.values)
-abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
+@GenerateElementFlags(flags: _FragmentFlags.values)
+abstract class FragmentImpl implements Fragment {
   static int _NEXT_ID = 0;
 
   /// The unique integer identifier of this fragment.
@@ -3586,8 +4257,8 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
   /// or `null` if this fragment is synthetic.
   int? firstTokenOffset;
 
-  /// The modifiers associated with this element.
-  EnumSet<Modifier> _modifiers = EnumSet.empty();
+  /// The flags associated with this fragment.
+  EnumSet<_FragmentStorageFlag> _flags = EnumSet.empty();
 
   @override
   String? documentationComment;
@@ -3667,6 +4338,36 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
     return enclosingFragment!.enclosingUnit;
   }
 
+  @generated
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      'isAugmentation': isAugmentation,
+      'isCompleteDeclaration': isCompleteDeclaration,
+    };
+  }
+
+  @generated
+  bool get isAugmentation {
+    return hasFlag(_FragmentStorageFlag.fragment_isAugmentation);
+  }
+
+  @generated
+  set isAugmentation(bool value) {
+    setFlag(_FragmentStorageFlag.fragment_isAugmentation, value);
+  }
+
+  @generated
+  bool get isCompleteDeclaration {
+    return hasFlag(_FragmentStorageFlag.fragment_isCompleteDeclaration);
+  }
+
+  @generated
+  set isCompleteDeclaration(bool value) {
+    setFlag(_FragmentStorageFlag.fragment_isCompleteDeclaration, value);
+  }
+
   /// Whether the element is private.
   ///
   /// Private elements are visible only within the library in which they are
@@ -3742,12 +4443,11 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
     }
   }
 
-  /// Return `true` if this element has the given [modifier] associated with it.
-  @override
-  bool hasModifier(Modifier modifier) => _modifiers[modifier];
+  /// Return `true` if this fragment has the given [flag] associated with it.
+  bool hasFlag(_FragmentStorageFlag flag) => _flags[flag];
 
-  void readModifiers(BinaryReader reader) {
-    _modifiers = EnumSet.read(reader);
+  void readFlags(BinaryReader reader) {
+    _flags = EnumSet.read(reader);
   }
 
   /// Set the code range for this element.
@@ -3756,11 +4456,10 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
     _codeLength = length;
   }
 
-  /// Set whether the given [modifier] is associated with this element to
+  /// Set whether the given [flag] is associated with this fragment to
   /// correspond to the given [value].
-  @override
-  void setModifier(Modifier modifier, bool value) {
-    _modifiers = _modifiers.updated(modifier, value);
+  void setFlag(_FragmentStorageFlag flag, bool value) {
+    _flags = _flags.updated(flag, value);
   }
 
   @override
@@ -3768,8 +4467,8 @@ abstract class FragmentImpl with _FragmentImplMixin implements Fragment {
     return "fragmentOf: $element";
   }
 
-  void writeModifiers(BinaryWriter writer) {
-    _modifiers.write(writer);
+  void writeFlags(BinaryWriter writer) {
+    _flags.write(writer);
   }
 }
 
@@ -3829,16 +4528,16 @@ abstract class FunctionTypedFragmentImpl extends FragmentImpl
   List<TypeParameterFragmentImpl> get typeParameters;
 }
 
-class GenerateFragmentImpl {
-  /// Modifiers to generate in the annotated class.
+class GenerateElementFlags {
+  /// Flags to generate in the annotated class.
   ///
   /// Should be a companion enum to reuse Dart syntax, and allow attaching
   /// optional documentation comments. Theoretically it could be a type
   /// literal, but then each enum constant is marked as unused, so we
-  /// use `_MyModifiersEnum.values` instead.
-  final List<Enum> modifiers;
+  /// use `_MyFragmentFlagsEnum.values` instead.
+  final List<Enum> flags;
 
-  const GenerateFragmentImpl({required this.modifiers});
+  const GenerateElementFlags({required this.flags});
 }
 
 /// The element used for a generic function type.
@@ -4124,6 +4823,24 @@ class GetterElementImpl extends PropertyAccessorElementImpl
       return current;
     });
   }
+
+  @override
+  @trackedIndirectly
+  InternalGetterElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    if (enclosingElement is! InstanceElement) {
+      throw StateError('Cannot substitute a non-member: $this');
+    }
+    if (!hasEnclosingTypeParameterReference) {
+      return this;
+    }
+    return SubstitutedGetterElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
 }
 
 class GetterFragmentImpl extends PropertyAccessorFragmentImpl
@@ -4173,12 +4890,16 @@ class HideElementCombinatorImpl implements HideElementCombinator {
 }
 
 @elementClass
+@GenerateElementFlags(flags: _InstanceElementFlags.values)
 sealed class InstanceElementImpl extends ElementImpl
     with DeferredMembersReadingMixin, DeferredResolutionReadingMixin
     implements InstanceElement, TypeParameterizedElement {
   List<FieldElementImpl> _fields = [];
+
   List<GetterElementImpl> _getters = [];
+
   List<SetterElementImpl> _setters = [];
+
   List<MethodElementImpl> _methods = [];
 
   @trackedInternal
@@ -4231,6 +4952,14 @@ sealed class InstanceElementImpl extends ElementImpl
   @override
   InstanceFragmentImpl get firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isSimplyBounded': isSimplyBounded};
+  }
+
   @override
   List<InstanceFragmentImpl> get fragments;
 
@@ -4254,14 +4983,16 @@ sealed class InstanceElementImpl extends ElementImpl
   @trackedIncludedInId
   bool get isPublic => _firstFragment.isPublic;
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isSimplyBounded {
-    return hasModifier(Modifier.SIMPLY_BOUNDED);
+    return hasFlag(_ElementStorageFlag.instanceElement_isSimplyBounded);
   }
 
+  @generated
   set isSimplyBounded(bool value) {
-    setModifier(Modifier.SIMPLY_BOUNDED, value);
+    setFlag(_ElementStorageFlag.instanceElement_isSimplyBounded, value);
   }
 
   @override
@@ -4734,6 +5465,7 @@ abstract class InstanceFragmentImpl extends FragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _InterfaceElementFlags.values)
 sealed class InterfaceElementImpl extends InstanceElementImpl
     implements InterfaceElement {
   /// The non-nullable instance of this element, without alias.
@@ -4803,6 +5535,14 @@ sealed class InterfaceElementImpl extends InstanceElementImpl
   @override
   InterfaceFragmentImpl get firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'hasNonFinalField': hasNonFinalField};
+  }
+
   @override
   @trackedDirectlyOpaque
   List<InterfaceFragmentImpl> get fragments {
@@ -4841,7 +5581,7 @@ sealed class InterfaceElementImpl extends InstanceElementImpl
 
   @override
   @trackedDirectlyOpaque
-  Map<Name, ExecutableElement> get inheritedConcreteMembers {
+  Map<Name, InternalExecutableElement> get inheritedConcreteMembers {
     globalResultRequirements?.recordOpaqueApiUse(
       kindId: RequirementFailureKindId.opaqueInheritedConcreteMembers,
       target: this,
@@ -4852,7 +5592,7 @@ sealed class InterfaceElementImpl extends InstanceElementImpl
 
   @override
   @trackedDirectlyOpaque
-  Map<Name, ExecutableElement> get inheritedMembers {
+  Map<Name, InternalExecutableElement> get inheritedMembers {
     globalResultRequirements?.recordOpaqueApiUse(
       kindId: RequirementFailureKindId.opaqueInheritedMembers,
       target: this,
@@ -4863,7 +5603,7 @@ sealed class InterfaceElementImpl extends InstanceElementImpl
 
   @override
   @trackedDirectlyOpaque
-  Map<Name, ExecutableElement> get interfaceMembers {
+  Map<Name, InternalExecutableElement> get interfaceMembers {
     globalResultRequirements?.recordOpaqueApiUse(
       kindId: RequirementFailureKindId.opaqueInterfaceMembers,
       target: this,
@@ -5297,6 +6037,9 @@ mixin InternalConstructorElement on InternalExecutableElement
 
   @override
   InternalConstructorElement? get superConstructor;
+
+  @override
+  InternalConstructorElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalExecutableElement implements ExecutableElement {
@@ -5323,6 +6066,9 @@ mixin InternalExecutableElement implements ExecutableElement {
 
   @override
   List<TypeParameterElementImpl> get typeParameters;
+
+  /// Returns this executable element with the given [substitution] applied.
+  InternalExecutableElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalFieldElement on InternalPropertyInducingElement
@@ -5335,6 +6081,21 @@ mixin InternalFieldElement on InternalPropertyInducingElement
 
   @override
   List<FieldFragmentImpl> get fragments;
+
+  /// Returns this field with the given [substitution] applied.
+  InternalFieldElement substitute(MapSubstitution substitution);
+}
+
+mixin InternalFieldFormalParameterElement on InternalFormalParameterElement
+    implements FieldFormalParameterElement {
+  @override
+  FieldFormalParameterElementImpl get baseElement;
+
+  @override
+  FieldFormalParameterFragmentImpl get firstFragment;
+
+  @override
+  List<FieldFormalParameterFragmentImpl> get fragments;
 }
 
 mixin InternalFormalParameterElement on InternalVariableElement
@@ -5366,6 +6127,9 @@ mixin InternalFormalParameterElement on InternalVariableElement
       buffer.write(defaultValueCode);
     }
   }
+
+  /// Returns this formal parameter with the given [substitution] applied.
+  InternalFormalParameterElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalGetterElement on InternalPropertyAccessorElement
@@ -5378,6 +6142,9 @@ mixin InternalGetterElement on InternalPropertyAccessorElement
 
   @override
   List<GetterFragmentImpl> get fragments;
+
+  @override
+  InternalGetterElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalMethodElement on InternalExecutableElement
@@ -5390,6 +6157,9 @@ mixin InternalMethodElement on InternalExecutableElement
 
   @override
   List<MethodFragmentImpl> get fragments;
+
+  @override
+  InternalMethodElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalPropertyAccessorElement on InternalExecutableElement
@@ -5441,6 +6211,9 @@ mixin InternalSetterElement on InternalPropertyAccessorElement
 
   @override
   List<SetterFragmentImpl> get fragments;
+
+  @override
+  InternalSetterElement substitute(MapSubstitution substitution);
 }
 
 mixin InternalSuperFormalParameterElement on InternalFormalParameterElement
@@ -5692,6 +6465,7 @@ class LabelFragmentImpl extends FragmentImpl implements LabelFragment {
 
 /// A concrete implementation of [LibraryElement].
 @elementClass
+@GenerateElementFlags(flags: _LibraryElementFlags.values)
 class LibraryElementImpl extends ElementImpl
     with DeferredResolutionReadingMixin
     implements LibraryElement {
@@ -5997,6 +6771,14 @@ class LibraryElementImpl extends ElementImpl
     _firstFragment = value;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isSynthetic': isSynthetic};
+  }
+
   @override
   @trackedDirectlyOpaque
   List<LibraryFragmentImpl> get fragments {
@@ -6051,8 +6833,15 @@ class LibraryElementImpl extends ElementImpl
     return _firstFragment.isOriginNotExistingFile;
   }
 
-  set isSynthetic(bool isSynthetic) {
-    setModifier(Modifier.SYNTHETIC, isSynthetic);
+  @generated
+  @trackedInternal
+  bool get isSynthetic {
+    return hasFlag(_ElementStorageFlag.libraryElement_isSynthetic);
+  }
+
+  @generated
+  set isSynthetic(bool value) {
+    setFlag(_ElementStorageFlag.libraryElement_isSynthetic, value);
   }
 
   @override
@@ -6635,9 +7424,9 @@ class LibraryExportImpl extends ElementDirectiveImpl implements LibraryExport {
 }
 
 /// A concrete implementation of [LibraryFragment].
-@GenerateFragmentImpl(modifiers: _LibraryFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _LibraryElementFlags.values)
 class LibraryFragmentImpl extends FragmentImpl
-    with DeferredResolutionReadingMixin, _LibraryFragmentImplMixin
+    with DeferredResolutionReadingMixin
     implements LibraryFragment {
   @override
   final Source source;
@@ -6782,6 +7571,17 @@ class LibraryFragmentImpl extends FragmentImpl
     _extensionTypes = fragments;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginNotExistingFile': isOriginNotExistingFile,
+    };
+  }
+
   @override
   List<TopLevelFunctionFragmentImpl> get functions {
     return _functions;
@@ -6816,6 +7616,22 @@ class LibraryFragmentImpl extends FragmentImpl
         .nonNulls
         .toSet()
         .toList();
+  }
+
+  @generated
+  @override
+  bool get isOriginNotExistingFile {
+    return hasFlag(
+      _FragmentStorageFlag.libraryFragment_isOriginNotExistingFile,
+    );
+  }
+
+  @generated
+  set isOriginNotExistingFile(bool value) {
+    setFlag(
+      _FragmentStorageFlag.libraryFragment_isOriginNotExistingFile,
+      value,
+    );
   }
 
   @override
@@ -7186,7 +8002,6 @@ final class LoadLibraryFunctionProvider {
 
     var fragment = TopLevelFunctionFragmentImpl(name: name);
     fragment.isOriginLoadLibrary = true;
-    fragment.isSynthetic = true;
     fragment.isStatic = true;
     fragment.enclosingFragment = library.firstFragment;
 
@@ -7296,21 +8111,6 @@ class LocalVariableElementImpl extends PromotableElementImpl
   List<LocalVariableFragmentImpl> get fragments {
     return [_firstFragment];
   }
-
-  @override
-  bool get hasImplicitType => _firstFragment.hasImplicitType;
-
-  @override
-  bool get isConst => _firstFragment.isConst;
-
-  @override
-  bool get isFinal => _firstFragment.isFinal;
-
-  @override
-  bool get isLate => _firstFragment.isLate;
-
-  @override
-  bool get isStatic => _firstFragment.isStatic;
 
   @override
   ElementKind get kind => ElementKind.LOCAL_VARIABLE;
@@ -7775,6 +8575,7 @@ final class MetadataImpl implements Metadata {
 }
 
 @elementClass
+@GenerateElementFlags(flags: _MethodElementFlags.values)
 class MethodElementImpl extends ExecutableElementImpl
     with InternalMethodElement {
   @override
@@ -7835,6 +8636,18 @@ class MethodElementImpl extends ExecutableElementImpl
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginInterface': isOriginInterface,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<MethodFragmentImpl> get fragments {
@@ -7850,13 +8663,19 @@ class MethodElementImpl extends ExecutableElementImpl
   @trackedIncludedInId
   bool get isOperator => _firstFragment.isOperator;
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginDeclaration => _firstFragment.isOriginDeclaration;
+  bool get isOriginDeclaration {
+    return _firstFragment.isOriginDeclaration;
+  }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginInterface => _firstFragment.isOriginInterface;
+  bool get isOriginInterface {
+    return _firstFragment.isOriginInterface;
+  }
 
   @override
   @trackedIncludedInId
@@ -7927,11 +8746,25 @@ class MethodElementImpl extends ExecutableElementImpl
       getFragments: (f) => f.formalParameters,
     );
   }
+
+  @override
+  @trackedIndirectly
+  InternalMethodElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    if (!hasEnclosingTypeParameterReference) {
+      return this;
+    }
+    return SubstitutedMethodElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
 }
 
-@GenerateFragmentImpl(modifiers: _MethodFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _MethodElementFlags.values)
 class MethodFragmentImpl extends ExecutableFragmentImpl
-    with _MethodFragmentImplMixin
     implements MethodFragment {
   @override
   late final MethodElementImpl element;
@@ -7965,6 +8798,18 @@ class MethodFragmentImpl extends ExecutableFragmentImpl
   InstanceFragmentImpl get enclosingFragment =>
       super.enclosingFragment as InstanceFragmentImpl;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginInterface': isOriginInterface,
+    };
+  }
+
   @override
   bool get isOperator {
     String name = displayName;
@@ -7976,6 +8821,26 @@ class MethodFragmentImpl extends ExecutableFragmentImpl
         (0x41 <= first && first <= 0x5A) ||
         first == 0x5F ||
         first == 0x24);
+  }
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(_FragmentStorageFlag.methodFragment_isOriginDeclaration);
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(_FragmentStorageFlag.methodFragment_isOriginDeclaration, value);
+  }
+
+  @generated
+  bool get isOriginInterface {
+    return hasFlag(_FragmentStorageFlag.methodFragment_isOriginInterface);
+  }
+
+  @generated
+  set isOriginInterface(bool value) {
+    setFlag(_FragmentStorageFlag.methodFragment_isOriginInterface, value);
   }
 
   @override
@@ -8000,6 +8865,7 @@ class MethodFragmentImpl extends ExecutableFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _MixinElementFlags.values)
 class MixinElementImpl extends InterfaceElementImpl implements MixinElement {
   @override
   @trackedIncludedInId
@@ -8013,8 +8879,6 @@ class MixinElementImpl extends InterfaceElementImpl implements MixinElement {
   MixinElementImpl(this.reference, this._firstFragment) {
     reference.element = this;
     _firstFragment.element = this;
-
-    isBase = _firstFragment.isBase;
   }
 
   @override
@@ -8028,6 +8892,14 @@ class MixinElementImpl extends InterfaceElementImpl implements MixinElement {
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isBase': isBase};
+  }
+
   @override
   @trackedDirectlyOpaque
   List<MixinFragmentImpl> get fragments {
@@ -8039,14 +8911,11 @@ class MixinElementImpl extends InterfaceElementImpl implements MixinElement {
     return _fragments;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isBase {
-    return hasModifier(Modifier.BASE);
-  }
-
-  set isBase(bool isBase) {
-    setModifier(Modifier.BASE, isBase);
+    return _firstFragment.isBase;
   }
 
   @override
@@ -8134,10 +9003,8 @@ class MixinElementImpl extends InterfaceElementImpl implements MixinElement {
 }
 
 /// A [ClassFragmentImpl] representing a mixin declaration.
-@GenerateFragmentImpl(modifiers: _MixinFragmentImplModifiers.values)
-class MixinFragmentImpl extends InterfaceFragmentImpl
-    with _MixinFragmentImplMixin
-    implements MixinFragment {
+@GenerateElementFlags(flags: _MixinElementFlags.values)
+class MixinFragmentImpl extends InterfaceFragmentImpl implements MixinFragment {
   @override
   late final MixinElementImpl element;
 
@@ -8149,6 +9016,24 @@ class MixinFragmentImpl extends InterfaceFragmentImpl
   /// Initialize a newly created class element to have the given [name] at the
   /// given [offset] in the file that contains the declaration of this element.
   MixinFragmentImpl({required super.name});
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isBase': isBase};
+  }
+
+  @generated
+  bool get isBase {
+    return hasFlag(_FragmentStorageFlag.mixinFragment_isBase);
+  }
+
+  @generated
+  set isBase(bool value) {
+    setFlag(_FragmentStorageFlag.mixinFragment_isBase, value);
+  }
 
   @override
   MixinFragmentImpl? get nextFragment =>
@@ -8168,177 +9053,6 @@ class MixinFragmentImpl extends InterfaceFragmentImpl
     fragment.previousFragment = this;
     nextFragment = fragment;
   }
-}
-
-/// The constants for all of the modifiers defined by the Dart language and for
-/// a few additional flags that are useful.
-///
-/// Clients may not extend, implement or mix-in this class.
-enum Modifier {
-  /// Indicates that the modifier 'abstract' was applied to the element.
-  ABSTRACT,
-
-  /// Indicates that an executable element has a body marked as being
-  /// asynchronous.
-  ASYNCHRONOUS,
-
-  /// Indicates that the modifier 'augment' was applied to the element.
-  AUGMENTATION,
-
-  /// Indicates that the element is the start of the augmentation chain,
-  /// in the simplest case - the declaration. But could be an augmentation
-  /// that has no augmented declaration (which is a compile-time error).
-  AUGMENTATION_CHAIN_START,
-
-  /// Indicates that the modifier 'base' was applied to the element.
-  BASE,
-
-  /// Indicates that the modifier 'const' was applied to the element.
-  CONST,
-
-  /// Indicates that the modifier 'covariant' was applied to the element.
-  EXPLICITLY_COVARIANT,
-
-  /// Indicates that the class is `Object` from `dart:core`.
-  DART_CORE_OBJECT,
-
-  /// Indicates that the element is either:
-  /// 1. Declaring formal parameters.
-  /// 2. Declaring constructor.
-  DECLARING,
-
-  /// Indicates that the element is a declaring formal parameter.
-  DEFERRED,
-
-  /// Indicates that a class element was defined by an enum declaration.
-  ENUM,
-
-  /// Indicates that the element is an enum constant field.
-  ENUM_CONSTANT,
-
-  /// Indicates that the element is an extension type member.
-  EXTENSION_TYPE_MEMBER,
-
-  /// Indicates that a class element was defined by an enum declaration.
-  EXTERNAL,
-
-  /// Indicates that the modifier 'factory' was applied to the element.
-  FACTORY,
-
-  /// Indicates that the modifier 'final' was applied to the element.
-  FINAL,
-
-  /// Indicates that an executable element has a body marked as being a
-  /// generator.
-  GENERATOR,
-
-  /// Indicates that the pseudo-modifier 'get' was applied to the element.
-  GETTER,
-
-  /// Indicates that this class has an explicit `extends` clause.
-  HAS_EXTENDS_CLAUSE,
-
-  /// A flag used for libraries indicating that the variable has an explicit
-  /// initializer.
-  HAS_INITIALIZER,
-
-  /// Indicates that the value of [FragmentImpl.sinceSdkVersion] was computed.
-  HAS_SINCE_SDK_VERSION_COMPUTED,
-
-  /// [HAS_SINCE_SDK_VERSION_COMPUTED] and the value was not `null`.
-  HAS_SINCE_SDK_VERSION_VALUE,
-
-  /// Indicates that the associated element did not have an explicit type
-  /// associated with it.
-  HAS_IMPLICIT_TYPE,
-
-  /// Indicates that the associated [ExecutableElement] did
-  /// not have an explicit return type associated with it.
-  HAS_IMPLICIT_RETURN_TYPE,
-
-  /// Indicates that the modifier 'interface' was applied to the element.
-  INTERFACE,
-
-  /// Indicates that the method invokes the super method with the same name.
-  INVOKES_SUPER_SELF,
-
-  /// Indicates that modifier 'lazy' was applied to the element.
-  LATE,
-
-  /// Indicates that a class is a mixin application.
-  MIXIN_APPLICATION,
-
-  /// Indicates that a class is a mixin class.
-  MIXIN_CLASS,
-
-  /// Whether the type of this fragment references a type parameter of the
-  /// enclosing element. This includes not only explicitly specified type
-  /// annotations, but also inferred types.
-  NO_ENCLOSING_TYPE_PARAMETER_REFERENCE,
-
-  /// Whether the constructor is from an explicit [ConstructorDeclaration]
-  /// or [PrimaryConstructorDeclaration].
-  ORIGIN_DECLARATION,
-
-  /// Whether the field is from a declaring formal parameter.
-  ORIGIN_DECLARING_FORMAL_PARAMETER,
-
-  /// Whether the field is the `values` field of an enum.
-  ORIGIN_ENUM_VALUES,
-
-  /// Indicates that the element is an extension type representation field,
-  /// created only for recovery purposes, and does not correspond to a formal
-  /// parameter.
-  ORIGIN_EXTENSION_TYPE_RECOVERY_REPRESENTATION,
-
-  /// Whether the property inducing element is from a getter or setter.
-  ORIGIN_GETTER_SETTER,
-
-  /// Whether the constructor was created because there are no explicit
-  /// constructors.
-  ORIGIN_IMPLICIT_DEFAULT,
-
-  /// Whether the property accessor is created while building interface.
-  ORIGIN_INTERFACE,
-
-  /// Whether the top-level function is `loadLibrary`.
-  ORIGIN_LOAD_LIBRARY,
-
-  /// Whether the constructor was created for a mixin application.
-  ORIGIN_MIXIN_APPLICATION,
-
-  /// Indicates that the library is created from a file that does not exist.
-  ORIGIN_NOT_EXISTING_FILE,
-
-  /// Whether the property accessor is from a field or top-level variable.
-  ORIGIN_VARIABLE,
-
-  /// Whether the constructor is primary.
-  PRIMARY,
-  PROMOTABLE,
-
-  /// Indicates whether the type of a [PropertyInducingFragmentImpl] should be
-  /// used to infer the initializer. We set it to `false` if the type was
-  /// inferred from the initializer itself.
-  SHOULD_USE_TYPE_FOR_INITIALIZER_INFERENCE,
-
-  /// Indicates that the modifier 'sealed' was applied to the element.
-  SEALED,
-
-  /// Indicates that the pseudo-modifier 'set' was applied to the element.
-  SETTER,
-
-  /// See [TypeParameterizedElement.isSimplyBounded].
-  SIMPLY_BOUNDED,
-
-  /// Indicates that the modifier 'static' was applied to the element.
-  STATIC,
-
-  /// Indicates that the element does not appear in the source code but was
-  /// implicitly created. For example, if a class does not define any
-  /// constructors, an implicit zero-argument constructor will be created and it
-  /// will be marked as being synthetic.
-  SYNTHETIC,
 }
 
 class MultiplyDefinedElementImpl extends ElementImpl
@@ -8572,9 +9286,7 @@ class NeverFragmentImpl extends FragmentImpl {
   /// should <b>not</b> be created except as part of creating the type
   /// associated with this element. The single instance of this class should be
   /// accessed through the method [instance].
-  NeverFragmentImpl._() : super(firstTokenOffset: null) {
-    isSynthetic = true;
-  }
+  NeverFragmentImpl._() : super(firstTokenOffset: null);
 
   @override
   List<Fragment> get children => const [];
@@ -8617,11 +9329,8 @@ class NeverFragmentImpl extends FragmentImpl {
 }
 
 /// A [VariableFragmentImpl], which is not a parameter.
-@GenerateFragmentImpl(
-  modifiers: _NonParameterVariableFragmentImplModifiers.values,
-)
-abstract class NonParameterVariableFragmentImpl extends VariableFragmentImpl
-    with _NonParameterVariableFragmentImplMixin {
+@GenerateElementFlags(flags: _NonParameterVariableElementFlags.values)
+abstract class NonParameterVariableFragmentImpl extends VariableFragmentImpl {
   /// Initialize a newly created variable element to have the given [name] and
   /// [offset].
   NonParameterVariableFragmentImpl({super.firstTokenOffset});
@@ -8629,6 +9338,29 @@ abstract class NonParameterVariableFragmentImpl extends VariableFragmentImpl
   @override
   FragmentImpl get enclosingFragment {
     return super.enclosingFragment as FragmentImpl;
+  }
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'hasInitializer': hasInitializer};
+  }
+
+  @generated
+  bool get hasInitializer {
+    return hasFlag(
+      _FragmentStorageFlag.nonParameterVariableFragment_hasInitializer,
+    );
+  }
+
+  @generated
+  set hasInitializer(bool value) {
+    setFlag(
+      _FragmentStorageFlag.nonParameterVariableFragment_hasInitializer,
+      value,
+    );
   }
 
   @override
@@ -8872,6 +9604,7 @@ class PrefixFragmentImpl extends FragmentImpl implements PrefixFragment {
 abstract class PromotableElementImpl extends VariableElementImpl {}
 
 @elementClass
+@GenerateElementFlags(flags: _PropertyAccessorElementFlags.values)
 abstract class PropertyAccessorElementImpl extends ExecutableElementImpl
     with InternalPropertyAccessorElement {
   PropertyInducingElementImpl? _variable3;
@@ -8887,21 +9620,37 @@ abstract class PropertyAccessorElementImpl extends ExecutableElementImpl
   @override
   PropertyAccessorFragmentImpl get firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginInterface': isOriginInterface,
+      'isOriginVariable': isOriginVariable,
+    };
+  }
+
   @override
   List<PropertyAccessorFragmentImpl> get fragments;
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginDeclaration {
     return _firstFragment.isOriginDeclaration;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginInterface {
     return _firstFragment.isOriginInterface;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginVariable {
@@ -8945,9 +9694,8 @@ abstract class PropertyAccessorElementImpl extends ExecutableElementImpl
   PropertyAccessorFragmentImpl get _firstFragment;
 }
 
-@GenerateFragmentImpl(modifiers: _PropertyAccessorFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _PropertyAccessorElementFlags.values)
 sealed class PropertyAccessorFragmentImpl extends ExecutableFragmentImpl
-    with _PropertyAccessorFragmentImplMixin
     implements PropertyAccessorFragment {
   @override
   final String? name;
@@ -8961,6 +9709,64 @@ sealed class PropertyAccessorFragmentImpl extends ExecutableFragmentImpl
 
   @override
   PropertyAccessorElementImpl get element;
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginInterface': isOriginInterface,
+      'isOriginVariable': isOriginVariable,
+    };
+  }
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginDeclaration,
+    );
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginDeclaration,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginInterface {
+    return hasFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginInterface,
+    );
+  }
+
+  @generated
+  set isOriginInterface(bool value) {
+    setFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginInterface,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginVariable {
+    return hasFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginVariable,
+    );
+  }
+
+  @generated
+  set isOriginVariable(bool value) {
+    setFlag(
+      _FragmentStorageFlag.propertyAccessorFragment_isOriginVariable,
+      value,
+    );
+  }
 
   @override
   MetadataImpl get metadata {
@@ -8988,6 +9794,7 @@ sealed class PropertyAccessorFragmentImpl extends ExecutableFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _PropertyInducingElementFlags.values)
 abstract class PropertyInducingElementImpl extends VariableElementImpl
     with InternalPropertyInducingElement, DeferredResolutionReadingMixin {
   @override
@@ -9017,6 +9824,21 @@ abstract class PropertyInducingElementImpl extends VariableElementImpl
   @override
   PropertyInducingFragmentImpl get firstFragment;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasInitializer': hasInitializer,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginGetterSetter': isOriginGetterSetter,
+      'shouldUseTypeForInitializerInference':
+          shouldUseTypeForInitializerInference,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<PropertyInducingFragmentImpl> get fragments {
@@ -9034,12 +9856,14 @@ abstract class PropertyInducingElementImpl extends VariableElementImpl
     return _fragments.any((f) => f.hasInitializer);
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginDeclaration {
     return _firstFragment.isOriginDeclaration;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isOriginGetterSetter {
@@ -9073,13 +9897,22 @@ abstract class PropertyInducingElementImpl extends VariableElementImpl
   @override
   Reference get reference;
 
+  @generated
   @trackedIncludedInId
   bool get shouldUseTypeForInitializerInference {
-    return hasModifier(Modifier.SHOULD_USE_TYPE_FOR_INITIALIZER_INFERENCE);
+    return hasFlag(
+      _ElementStorageFlag
+          .propertyInducingElement_shouldUseTypeForInitializerInference,
+    );
   }
 
+  @generated
   set shouldUseTypeForInitializerInference(bool value) {
-    setModifier(Modifier.SHOULD_USE_TYPE_FOR_INITIALIZER_INFERENCE, value);
+    setFlag(
+      _ElementStorageFlag
+          .propertyInducingElement_shouldUseTypeForInitializerInference,
+      value,
+    );
   }
 
   @override
@@ -9136,10 +9969,10 @@ abstract class PropertyInducingElementTypeInference {
   TypeImpl perform();
 }
 
-@GenerateFragmentImpl(modifiers: _PropertyInducingFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _PropertyInducingElementFlags.values)
 abstract class PropertyInducingFragmentImpl
     extends NonParameterVariableFragmentImpl
-    with DeferredResolutionReadingMixin, _PropertyInducingFragmentImplMixin
+    with DeferredResolutionReadingMixin
     implements PropertyInducingFragment {
   @override
   final String? name;
@@ -9163,6 +9996,18 @@ abstract class PropertyInducingFragmentImpl
   @override
   PropertyInducingElementImpl get element;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginGetterSetter': isOriginGetterSetter,
+    };
+  }
+
   /// Return `true` if this variable needs the setter.
   bool get hasSetter {
     if (isConst) {
@@ -9174,6 +10019,36 @@ abstract class PropertyInducingFragmentImpl
     }
 
     return !isFinal;
+  }
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(
+      _FragmentStorageFlag.propertyInducingFragment_isOriginDeclaration,
+    );
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(
+      _FragmentStorageFlag.propertyInducingFragment_isOriginDeclaration,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginGetterSetter {
+    return hasFlag(
+      _FragmentStorageFlag.propertyInducingFragment_isOriginGetterSetter,
+    );
+  }
+
+  @generated
+  set isOriginGetterSetter(bool value) {
+    setFlag(
+      _FragmentStorageFlag.propertyInducingFragment_isOriginGetterSetter,
+      value,
+    );
   }
 
   @override
@@ -9321,6 +10196,24 @@ class SetterElementImpl extends PropertyAccessorElementImpl
       previous.addFragment(current);
       return current;
     });
+  }
+
+  @override
+  @trackedIndirectly
+  InternalSetterElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    if (enclosingElement is! InstanceElement) {
+      throw StateError('Cannot substitute a non-member: $this');
+    }
+    if (!hasEnclosingTypeParameterReference) {
+      return this;
+    }
+    return SubstitutedSetterElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
   }
 }
 
@@ -9504,6 +10397,17 @@ class SuperFormalParameterElementImpl extends FormalParameterElementImpl
         .toList()
         .indexOf(this);
   }
+
+  @override
+  InternalSuperFormalParameterElement substitute(MapSubstitution substitution) {
+    if (substitution.map.isEmpty) {
+      return this;
+    }
+    return SubstitutedSuperFormalParameterElementImpl(
+      baseElement: this,
+      substitution: substitution,
+    );
+  }
 }
 
 class SuperFormalParameterFragmentImpl extends FormalParameterFragmentImpl
@@ -9554,6 +10458,7 @@ class SuperFormalParameterFragmentImpl extends FormalParameterFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _TopLevelFunctionElementFlags.values)
 class TopLevelFunctionElementImpl extends ExecutableElementImpl
     implements TopLevelFunctionElement {
   @override
@@ -9587,6 +10492,18 @@ class TopLevelFunctionElementImpl extends ExecutableElementImpl
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginLoadLibrary': isOriginLoadLibrary,
+    };
+  }
+
   @override
   @trackedDirectlyOpaque
   List<TopLevelFunctionFragmentImpl> get fragments {
@@ -9610,13 +10527,19 @@ class TopLevelFunctionElementImpl extends ExecutableElementImpl
     return displayName == TopLevelFunctionElement.MAIN_FUNCTION_NAME;
   }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginDeclaration => _firstFragment.isOriginDeclaration;
+  bool get isOriginDeclaration {
+    return _firstFragment.isOriginDeclaration;
+  }
 
+  @generated
   @override
   @trackedIncludedInId
-  bool get isOriginLoadLibrary => _firstFragment.isOriginLoadLibrary;
+  bool get isOriginLoadLibrary {
+    return _firstFragment.isOriginLoadLibrary;
+  }
 
   @override
   @trackedIncludedInId
@@ -9685,9 +10608,8 @@ class TopLevelFunctionElementImpl extends ExecutableElementImpl
 }
 
 /// A concrete implementation of a [TopLevelFunctionFragment].
-@GenerateFragmentImpl(modifiers: _TopLevelFunctionFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _TopLevelFunctionElementFlags.values)
 class TopLevelFunctionFragmentImpl extends FunctionFragmentImpl
-    with _TopLevelFunctionFragmentImplMixin
     implements TopLevelFunctionFragment {
   /// The element corresponding to this fragment.
   @override
@@ -9707,6 +10629,48 @@ class TopLevelFunctionFragmentImpl extends FunctionFragmentImpl
 
   @override
   set enclosingFragment(covariant LibraryFragmentImpl fragment);
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginDeclaration': isOriginDeclaration,
+      'isOriginLoadLibrary': isOriginLoadLibrary,
+    };
+  }
+
+  @generated
+  bool get isOriginDeclaration {
+    return hasFlag(
+      _FragmentStorageFlag.topLevelFunctionFragment_isOriginDeclaration,
+    );
+  }
+
+  @generated
+  set isOriginDeclaration(bool value) {
+    setFlag(
+      _FragmentStorageFlag.topLevelFunctionFragment_isOriginDeclaration,
+      value,
+    );
+  }
+
+  @generated
+  bool get isOriginLoadLibrary {
+    return hasFlag(
+      _FragmentStorageFlag.topLevelFunctionFragment_isOriginLoadLibrary,
+    );
+  }
+
+  @generated
+  set isOriginLoadLibrary(bool value) {
+    setFlag(
+      _FragmentStorageFlag.topLevelFunctionFragment_isOriginLoadLibrary,
+      value,
+    );
+  }
 
   void addFragment(TopLevelFunctionFragmentImpl fragment) {
     fragment.element = element;
@@ -9759,30 +10723,6 @@ class TopLevelVariableElementImpl extends PropertyInducingElementImpl
     );
     return _fragments;
   }
-
-  @override
-  @trackedIncludedInId
-  bool get hasImplicitType => _firstFragment.hasImplicitType;
-
-  @override
-  @trackedIncludedInId
-  bool get isConst => _firstFragment.isConst;
-
-  @override
-  @trackedIncludedInId
-  bool get isExternal => _firstFragment.isExternal;
-
-  @override
-  @trackedIncludedInId
-  bool get isFinal => _firstFragment.isFinal;
-
-  @override
-  @trackedIncludedInId
-  bool get isLate => _firstFragment.isLate;
-
-  @override
-  @trackedIncludedInId
-  bool get isStatic => _firstFragment.isStatic;
 
   @override
   @trackedIncludedInId
@@ -9888,6 +10828,7 @@ class TopLevelVariableFragmentImpl extends PropertyInducingFragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _TypeAliasElementFlags.values)
 class TypeAliasElementImpl extends ElementImpl
     with DeferredResolutionReadingMixin
     implements TypeAliasElement {
@@ -9941,6 +10882,14 @@ class TypeAliasElementImpl extends ElementImpl
     return _firstFragment;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {...super.flagsForTesting, 'isSimplyBounded': isSimplyBounded};
+  }
+
   @override
   @trackedDirectlyOpaque
   List<TypeAliasFragmentImpl> get fragments {
@@ -9990,14 +10939,16 @@ class TypeAliasElementImpl extends ElementImpl
     return true;
   }
 
+  @generated
   @override
   @trackedIncludedInId
   bool get isSimplyBounded {
-    return hasModifier(Modifier.SIMPLY_BOUNDED);
+    return hasFlag(_ElementStorageFlag.typeAliasElement_isSimplyBounded);
   }
 
+  @generated
   set isSimplyBounded(bool value) {
-    setModifier(Modifier.SIMPLY_BOUNDED, value);
+    setFlag(_ElementStorageFlag.typeAliasElement_isSimplyBounded, value);
   }
 
   @override
@@ -10325,6 +11276,7 @@ class TypeParameterElementImpl extends ElementImpl
   }
 }
 
+@GenerateElementFlags(flags: _TypeParameterElementFlags.values)
 class TypeParameterFragmentImpl extends FragmentImpl
     implements TypeParameterFragment {
   @override
@@ -10347,9 +11299,7 @@ class TypeParameterFragmentImpl extends FragmentImpl
   TypeParameterFragmentImpl({required this.name, super.firstTokenOffset});
 
   TypeParameterFragmentImpl.synthetic({required this.name})
-    : super(firstTokenOffset: null) {
-    isSynthetic = true;
-  }
+    : super(firstTokenOffset: null);
 
   @override
   List<Fragment> get children => const [];
@@ -10375,6 +11325,35 @@ class TypeParameterFragmentImpl extends FragmentImpl
 
   set element(TypeParameterElementImpl element) {
     _element = element;
+  }
+
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'isOriginPreviousFragmentOfEnclosing':
+          isOriginPreviousFragmentOfEnclosing,
+    };
+  }
+
+  @generated
+  bool get isOriginPreviousFragmentOfEnclosing {
+    return hasFlag(
+      _FragmentStorageFlag
+          .typeParameterFragment_isOriginPreviousFragmentOfEnclosing,
+    );
+  }
+
+  @generated
+  set isOriginPreviousFragmentOfEnclosing(bool value) {
+    setFlag(
+      _FragmentStorageFlag
+          .typeParameterFragment_isOriginPreviousFragmentOfEnclosing,
+      value,
+    );
   }
 
   @override
@@ -10411,6 +11390,7 @@ class TypeParameterFragmentImpl extends FragmentImpl
 }
 
 @elementClass
+@GenerateElementFlags(flags: _VariableElementFlags.values)
 abstract class VariableElementImpl extends ElementImpl
     with InternalVariableElement
     implements ConstantEvaluationTarget {
@@ -10448,9 +11428,73 @@ abstract class VariableElementImpl extends ElementImpl
     return null;
   }
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasImplicitType': hasImplicitType,
+      'isAbstract': isAbstract,
+      'isConst': isConst,
+      'isExternal': isExternal,
+      'isFinal': isFinal,
+      'isLate': isLate,
+      'isStatic': isStatic,
+    };
+  }
+
+  @generated
+  @override
+  @trackedIncludedInId
+  bool get hasImplicitType {
+    return _firstFragment.hasImplicitType;
+  }
+
+  @generated
+  @trackedIncludedInId
+  bool get isAbstract {
+    return _firstFragment.isAbstract;
+  }
+
+  @generated
+  @override
+  @trackedIncludedInId
+  bool get isConst {
+    return _firstFragment.isConst;
+  }
+
   @override
   @trackedInternal
   bool get isConstantEvaluated => evaluationResult != null;
+
+  @generated
+  @trackedIncludedInId
+  bool get isExternal {
+    return _firstFragment.isExternal;
+  }
+
+  @generated
+  @override
+  @trackedIncludedInId
+  bool get isFinal {
+    return _firstFragment.isFinal;
+  }
+
+  @generated
+  @override
+  @trackedIncludedInId
+  bool get isLate {
+    return _firstFragment.isLate;
+  }
+
+  @generated
+  @override
+  @trackedIncludedInId
+  bool get isStatic {
+    return _firstFragment.isStatic;
+  }
 
   @override
   @trackedIncludedInId
@@ -10459,6 +11503,9 @@ abstract class VariableElementImpl extends ElementImpl
   set type(TypeImpl type) {
     // TODO(scheglov): eventually move logic from PropertyInducingElementImpl
   }
+
+  @override
+  VariableFragmentImpl get _firstFragment;
 
   List<VariableFragmentImpl> get _fragments;
 
@@ -10514,9 +11561,8 @@ abstract class VariableElementImpl extends ElementImpl
   }
 }
 
-@GenerateFragmentImpl(modifiers: _VariableFragmentImplModifiers.values)
+@GenerateElementFlags(flags: _VariableElementFlags.values)
 abstract class VariableFragmentImpl extends FragmentImpl
-    with _VariableFragmentImplMixin
     implements VariableFragment {
   /// If this element represents a constant variable, and it has an initializer,
   /// a copy of the initializer for the constant.  Otherwise `null`.
@@ -10537,9 +11583,117 @@ abstract class VariableFragmentImpl extends FragmentImpl
   @override
   VariableElementImpl get element;
 
+  @generated
+  @override
+  @visibleForTesting
+  @trackedInternal
+  Map<String, bool> get flagsForTesting {
+    return {
+      ...super.flagsForTesting,
+      'hasImplicitType': hasImplicitType,
+      'isAbstract': isAbstract,
+      'isConst': isConst,
+      'isExternal': isExternal,
+      'isFinal': isFinal,
+      'isLate': isLate,
+      'isStatic': isStatic,
+    };
+  }
+
+  /// Whether the variable element did not have an explicit type specified
+  /// for it.
+  @generated
+  bool get hasImplicitType {
+    return hasFlag(_FragmentStorageFlag.variableFragment_hasImplicitType);
+  }
+
+  @generated
+  set hasImplicitType(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_hasImplicitType, value);
+  }
+
   // TODO(scheglov): remove this
   ExpressionImpl? get initializer {
     return constantInitializer;
+  }
+
+  /// Whether the executable element is abstract.
+  ///
+  /// Executable elements are abstract if they are not external, and have no
+  /// body.
+  @generated
+  bool get isAbstract {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isAbstract);
+  }
+
+  @generated
+  set isAbstract(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isAbstract, value);
+  }
+
+  @generated
+  bool get isConst {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isConst);
+  }
+
+  @generated
+  set isConst(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isConst, value);
+  }
+
+  /// Executable elements are external if they are explicitly marked as such
+  /// using the 'external' keyword.
+  @generated
+  bool get isExternal {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isExternal);
+  }
+
+  @generated
+  set isExternal(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isExternal, value);
+  }
+
+  /// Whether the variable was declared with the 'final' modifier.
+  ///
+  /// Variables that are declared with the 'const' modifier will return `false`
+  /// even though they are implicitly final.
+  @generated
+  bool get isFinal {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isFinal);
+  }
+
+  @generated
+  set isFinal(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isFinal, value);
+  }
+
+  @generated
+  bool get isLate {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isLate);
+  }
+
+  @generated
+  set isLate(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isLate, value);
+  }
+
+  /// Whether the element is a static variable, as per section 8 of the Dart
+  /// Language Specification:
+  ///
+  /// > A static variable is a variable that is not associated with a particular
+  /// > instance, but rather with an entire library or class. Static variables
+  /// > include library variables and class variables. Class variables are
+  /// > variables whose declaration is immediately nested inside a class
+  /// > declaration and includes the modifier static. A library variable is
+  /// > implicitly static.
+  @generated
+  bool get isStatic {
+    return hasFlag(_FragmentStorageFlag.variableFragment_isStatic);
+  }
+
+  @generated
+  set isStatic(bool value) {
+    setFlag(_FragmentStorageFlag.variableFragment_isStatic, value);
   }
 
   @override
@@ -10565,93 +11719,332 @@ abstract class VariableFragmentImpl extends FragmentImpl
   VariableFragmentImpl? get previousFragment;
 }
 
-enum _ClassFragmentImplModifiers {
-  hasExtendsClause,
+enum _ClassElementFlags {
+  hasExtendsClause(fragment: true),
+  isAbstract(fragment: true, element: _ElementFlagSource.firstFragment),
+  isBase(fragment: true, element: _ElementFlagSource.stored),
+  isFinal(fragment: true, element: _ElementFlagSource.stored),
+  isInterface(fragment: true, element: _ElementFlagSource.stored),
+  isMixinApplication(fragment: true, element: _ElementFlagSource.firstFragment),
+  isMixinClass(fragment: true, element: _ElementFlagSource.firstFragment),
+  isSealed(fragment: true, element: _ElementFlagSource.firstFragment);
 
-  /// Whether the executable element is abstract.
-  ///
-  /// Executable elements are abstract if they are not external, and have no
-  /// body.
-  isAbstract,
-  isBase,
-  isFinal,
-  isInterface,
-  isMixinApplication,
-  isMixinClass,
-  isSealed,
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _ClassElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _ConstructorFragmentImplModifiers {
-  isConst,
-  isFactory,
-  isOriginDeclaration,
-  isOriginImplicitDefault,
-  isOriginMixinApplication,
-  isPrimary,
+enum _ConstructorElementFlags {
+  isConst(fragment: true, element: _ElementFlagSource.firstFragment),
+  isFactory(fragment: true, element: _ElementFlagSource.firstFragment),
+  isOriginDeclaration(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginImplicitDefault(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginMixinApplication(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isPrimary(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _ConstructorElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _ExecutableFragmentImplModifiers {
-  hasImplicitReturnType,
-  invokesSuperSelf,
+enum _ElementFlags {
+  hasSinceSdkVersionComputed(element: _ElementFlagSource.stored),
+  hasSinceSdkVersionValue(element: _ElementFlagSource.stored);
 
-  /// Whether the executable element is abstract.
-  ///
-  /// Executable elements are abstract if they are not external, and have no
-  /// body.
-  isAbstract,
-  isAsynchronous,
+  final bool fragment;
+  final _ElementFlagSource element;
 
-  /// Executable elements are external if they are explicitly marked as such
-  /// using the 'external' keyword.
-  isExternal,
-  isGenerator,
-  isStatic,
+  const _ElementFlags({this.element = _ElementFlagSource.none})
+    : fragment = false;
 }
 
-enum _FieldFormalParameterFragmentModifiers { isDeclaring }
+enum _ElementFlagSource { none, firstFragment, stored, computed }
 
-enum _FieldFragmentImplModifiers {
-  /// Whether the field was explicitly marked as being covariant.
-  isExplicitlyCovariant,
-  isEnumConstant,
-  isOriginDeclaringFormalParameter,
-  isOriginEnumValues,
-  isOriginExtensionTypeRecoveryRepresentation,
-  isPromotable,
+@generated
+enum _ElementStorageFlag {
+  classElement_isBase,
+  classElement_isFinal,
+  classElement_isInterface,
+  element_hasSinceSdkVersionComputed,
+  element_hasSinceSdkVersionValue,
+  executableElement_hasEnclosingTypeParameterReference,
+  executableElement_isExtensionTypeMember,
+  fieldElement_hasEnclosingTypeParameterReference,
+  instanceElement_isSimplyBounded,
+  libraryElement_isSynthetic,
+  propertyInducingElement_shouldUseTypeForInitializerInference,
+  typeAliasElement_isSimplyBounded,
 }
 
-enum _FormalParameterFragmentImplModifiers {
-  /// Whether the field was explicitly marked as being covariant.
-  isExplicitlyCovariant,
-  isOriginDeclaration,
+enum _ExecutableElementFlags {
+  hasEnclosingTypeParameterReference(element: _ElementFlagSource.stored),
+  hasImplicitReturnType(fragment: true),
+  invokesSuperSelf(fragment: true, element: _ElementFlagSource.firstFragment),
+  isAbstract(fragment: true),
+  isAsynchronous(fragment: true),
+  isExtensionTypeMember(element: _ElementFlagSource.stored),
+  isExternal(fragment: true, element: _ElementFlagSource.firstFragment),
+  isGenerator(fragment: true),
+  isStatic(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _ExecutableElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _FragmentImplModifiers {
-  isAugmentation,
+enum _FieldElementFlags {
+  hasEnclosingTypeParameterReference(element: _ElementFlagSource.stored),
+  isEnumConstant(fragment: true, element: _ElementFlagSource.firstFragment),
+  isExplicitlyCovariant(fragment: true),
+  isOriginDeclaringFormalParameter(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginEnumValues(fragment: true, element: _ElementFlagSource.firstFragment),
+  isOriginExtensionTypeRecoveryRepresentation(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isPromotable(fragment: true, element: _ElementFlagSource.firstFragment);
 
-  /// A synthetic element is an element that is not represented in the source
-  /// code explicitly, but is implied by the source code, such as the default
-  /// constructor for a class that does not explicitly define any constructors.
-  isSynthetic,
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _FieldElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _LibraryFragmentImplModifiers { isOriginNotExistingFile }
+enum _FieldFormalParameterElementFlags {
+  isDeclaring(fragment: true, element: _ElementFlagSource.firstFragment);
 
-enum _MethodFragmentImplModifiers { isOriginDeclaration, isOriginInterface }
+  final bool fragment;
+  final _ElementFlagSource element;
 
-enum _MixinFragmentImplModifiers { isBase }
-
-enum _NonParameterVariableFragmentImplModifiers { hasInitializer }
-
-enum _PropertyAccessorFragmentImplModifiers {
-  isOriginDeclaration,
-  isOriginInterface,
-  isOriginVariable,
+  const _FieldFormalParameterElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _PropertyInducingFragmentImplModifiers {
-  isOriginDeclaration,
-  isOriginGetterSetter,
+enum _FormalParameterElementFlags {
+  hasDefaultValue(element: _ElementFlagSource.computed),
+  isExplicitlyCovariant(fragment: true),
+  isOriginDeclaration(fragment: true),
+  isOriginMixinApplicationClassConstructor(fragment: true),
+  isOriginPreviousFragmentOfEnclosing(fragment: true);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _FormalParameterElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
+}
+
+enum _FragmentFlags {
+  isAugmentation(fragment: true),
+  isCompleteDeclaration(fragment: true);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _FragmentFlags({this.fragment = false})
+    : element = _ElementFlagSource.none;
+}
+
+@generated
+enum _FragmentStorageFlag {
+  classFragment_hasExtendsClause,
+  classFragment_isAbstract,
+  classFragment_isBase,
+  classFragment_isFinal,
+  classFragment_isInterface,
+  classFragment_isMixinApplication,
+  classFragment_isMixinClass,
+  classFragment_isSealed,
+  constructorFragment_isConst,
+  constructorFragment_isFactory,
+  constructorFragment_isOriginDeclaration,
+  constructorFragment_isOriginImplicitDefault,
+  constructorFragment_isOriginMixinApplication,
+  constructorFragment_isPrimary,
+  executableFragment_hasImplicitReturnType,
+  executableFragment_invokesSuperSelf,
+  executableFragment_isAbstract,
+  executableFragment_isAsynchronous,
+  executableFragment_isExternal,
+  executableFragment_isGenerator,
+  executableFragment_isStatic,
+  fieldFormalParameterFragment_isDeclaring,
+  fieldFragment_isEnumConstant,
+  fieldFragment_isExplicitlyCovariant,
+  fieldFragment_isOriginDeclaringFormalParameter,
+  fieldFragment_isOriginEnumValues,
+  fieldFragment_isOriginExtensionTypeRecoveryRepresentation,
+  fieldFragment_isPromotable,
+  formalParameterFragment_isExplicitlyCovariant,
+  formalParameterFragment_isOriginDeclaration,
+  formalParameterFragment_isOriginMixinApplicationClassConstructor,
+  formalParameterFragment_isOriginPreviousFragmentOfEnclosing,
+  fragment_isAugmentation,
+  fragment_isCompleteDeclaration,
+  libraryFragment_isOriginNotExistingFile,
+  methodFragment_isOriginDeclaration,
+  methodFragment_isOriginInterface,
+  mixinFragment_isBase,
+  nonParameterVariableFragment_hasInitializer,
+  propertyAccessorFragment_isOriginDeclaration,
+  propertyAccessorFragment_isOriginInterface,
+  propertyAccessorFragment_isOriginVariable,
+  propertyInducingFragment_isOriginDeclaration,
+  propertyInducingFragment_isOriginGetterSetter,
+  topLevelFunctionFragment_isOriginDeclaration,
+  topLevelFunctionFragment_isOriginLoadLibrary,
+  typeParameterFragment_isOriginPreviousFragmentOfEnclosing,
+  variableFragment_hasImplicitType,
+  variableFragment_isAbstract,
+  variableFragment_isConst,
+  variableFragment_isExternal,
+  variableFragment_isFinal,
+  variableFragment_isLate,
+  variableFragment_isStatic,
+}
+
+class _Generated {
+  const _Generated();
+}
+
+enum _InstanceElementFlags {
+  isSimplyBounded(element: _ElementFlagSource.stored);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _InstanceElementFlags({this.element = _ElementFlagSource.none})
+    : fragment = false;
+}
+
+enum _InterfaceElementFlags {
+  hasNonFinalField(element: _ElementFlagSource.computed);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _InterfaceElementFlags({this.element = _ElementFlagSource.none})
+    : fragment = false;
+}
+
+enum _LibraryElementFlags {
+  isOriginNotExistingFile(fragment: true),
+  isSynthetic(element: _ElementFlagSource.stored);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _LibraryElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
+}
+
+enum _MethodElementFlags {
+  isOriginDeclaration(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginInterface(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _MethodElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
+}
+
+enum _MixinElementFlags {
+  isBase(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _MixinElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
+}
+
+enum _NonParameterVariableElementFlags {
+  hasInitializer(fragment: true);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _NonParameterVariableElementFlags({this.fragment = false})
+    : element = _ElementFlagSource.none;
+}
+
+enum _PropertyAccessorElementFlags {
+  isOriginDeclaration(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginInterface(fragment: true, element: _ElementFlagSource.firstFragment),
+  isOriginVariable(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _PropertyAccessorElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
+}
+
+enum _PropertyInducingElementFlags {
+  hasInitializer(element: _ElementFlagSource.computed),
+  isOriginDeclaration(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginGetterSetter(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  shouldUseTypeForInitializerInference(element: _ElementFlagSource.stored);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _PropertyInducingElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
 /// Instances of [List]s that are used as "not yet computed" values, they
@@ -10684,42 +12077,59 @@ class _Sentinel {
   static final List<LibraryImportImpl> libraryImport = List.unmodifiable([]);
 }
 
-enum _TopLevelFunctionFragmentImplModifiers {
-  isOriginDeclaration,
-  isOriginLoadLibrary,
+enum _TopLevelFunctionElementFlags {
+  isOriginDeclaration(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  ),
+  isOriginLoadLibrary(
+    fragment: true,
+    element: _ElementFlagSource.firstFragment,
+  );
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _TopLevelFunctionElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }
 
-enum _VariableFragmentImplModifiers {
-  /// Whether the variable element did not have an explicit type specified
-  /// for it.
-  hasImplicitType,
+enum _TypeAliasElementFlags {
+  isSimplyBounded(element: _ElementFlagSource.stored);
 
-  /// Whether the executable element is abstract.
-  ///
-  /// Executable elements are abstract if they are not external, and have no
-  /// body.
-  isAbstract,
-  isConst,
+  final bool fragment;
+  final _ElementFlagSource element;
 
-  /// Executable elements are external if they are explicitly marked as such
-  /// using the 'external' keyword.
-  isExternal,
+  const _TypeAliasElementFlags({this.element = _ElementFlagSource.none})
+    : fragment = false;
+}
 
-  /// Whether the variable was declared with the 'final' modifier.
-  ///
-  /// Variables that are declared with the 'const' modifier will return `false`
-  /// even though they are implicitly final.
-  isFinal,
-  isLate,
+enum _TypeParameterElementFlags {
+  isOriginPreviousFragmentOfEnclosing(fragment: true);
 
-  /// Whether the element is a static variable, as per section 8 of the Dart
-  /// Language Specification:
-  ///
-  /// > A static variable is a variable that is not associated with a particular
-  /// > instance, but rather with an entire library or class. Static variables
-  /// > include library variables and class variables. Class variables are
-  /// > variables whose declaration is immediately nested inside a class
-  /// > declaration and includes the modifier static. A library variable is
-  /// > implicitly static.
-  isStatic,
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _TypeParameterElementFlags({this.fragment = false})
+    : element = _ElementFlagSource.none;
+}
+
+enum _VariableElementFlags {
+  hasImplicitType(fragment: true, element: _ElementFlagSource.firstFragment),
+  isAbstract(fragment: true, element: _ElementFlagSource.firstFragment),
+  isConst(fragment: true, element: _ElementFlagSource.firstFragment),
+  isExternal(fragment: true, element: _ElementFlagSource.firstFragment),
+  isFinal(fragment: true, element: _ElementFlagSource.firstFragment),
+  isLate(fragment: true, element: _ElementFlagSource.firstFragment),
+  isStatic(fragment: true, element: _ElementFlagSource.firstFragment);
+
+  final bool fragment;
+  final _ElementFlagSource element;
+
+  const _VariableElementFlags({
+    this.fragment = false,
+    this.element = _ElementFlagSource.none,
+  });
 }

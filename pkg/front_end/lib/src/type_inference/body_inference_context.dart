@@ -16,9 +16,8 @@ import 'inference_visitor_base.dart';
 import 'type_demotion.dart';
 import 'type_schema.dart' show UnknownType;
 
-/// Keeps track of information about the innermost function or closure being
-/// inferred.
-abstract class ClosureContext implements SharedBodyInferenceContext {
+/// Keeps track of information about the innermost function body being inferred.
+abstract class BodyInferenceContext implements SharedBodyInferenceContext {
   @override
   bool get isAsync;
 
@@ -45,7 +44,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
 
   DartType? get emittedValueType;
 
-  factory ClosureContext(
+  factory BodyInferenceContext(
     InferenceVisitorBase inferrer,
     AsyncMarker asyncMarker,
     DartType returnContext,
@@ -66,7 +65,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
           inferrer.typeSchemaEnvironment.getUnionFreeType(returnContext),
           inferrer.coreTypes.streamClass,
         );
-        return new _AsyncStarClosureContext(
+        return new _AsyncStarContext(
           inferrer,
           yieldContext,
           declaredReturnType,
@@ -77,7 +76,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
           inferrer.typeSchemaEnvironment.getUnionFreeType(returnContext),
           inferrer.coreTypes.iterableClass,
         );
-        return new _SyncStarClosureContext(
+        return new _SyncStarContext(
           inferrer,
           yieldContext,
           declaredReturnType,
@@ -95,7 +94,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
           declaredReturnType,
         );
       }
-      return new _AsyncClosureContext(
+      return new _AsyncContext(
         inferrer,
         returnContext,
         declaredReturnType,
@@ -103,7 +102,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
         futureValueType,
       );
     } else {
-      return new _SyncClosureContext(
+      return new _SyncContext(
         inferrer,
         returnContext,
         declaredReturnType,
@@ -112,7 +111,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
     }
   }
 
-  ClosureContext._();
+  BodyInferenceContext._();
 
   @override
   SharedTypeSchemaView get sharedYieldContext =>
@@ -161,7 +160,7 @@ abstract class ClosureContext implements SharedBodyInferenceContext {
   });
 }
 
-class _SyncClosureContext extends ClosureContext {
+class _SyncContext extends BodyInferenceContext {
   final InferenceVisitorBase inferrer;
 
   @override
@@ -201,7 +200,7 @@ class _SyncClosureContext extends ClosureContext {
   /// being inferred.
   List<DartType>? _returnExpressionTypes;
 
-  _SyncClosureContext(
+  _SyncContext(
     this.inferrer,
     this._returnContext,
     this._declaredReturnType,
@@ -281,7 +280,6 @@ class _SyncClosureContext extends ClosureContext {
           expressionType,
           statement.expression!,
           fileOffset: statement.expression!.fileOffset,
-          isVoidAllowed: true,
           errorTemplate: diag.invalidReturn,
         );
         statement.expression = expression..parent = statement;
@@ -439,7 +437,7 @@ class _SyncClosureContext extends ClosureContext {
 
 /// Keeps track of information about the innermost function or closure being
 /// inferred.
-class _AsyncClosureContext extends ClosureContext {
+class _AsyncContext extends BodyInferenceContext {
   final InferenceVisitorBase inferrer;
 
   @override
@@ -482,7 +480,7 @@ class _AsyncClosureContext extends ClosureContext {
   /// being inferred.
   List<DartType>? _returnExpressionTypes;
 
-  _AsyncClosureContext(
+  _AsyncContext(
     this.inferrer,
     this._returnContext,
     this._declaredReturnType,
@@ -746,7 +744,7 @@ class _AsyncClosureContext extends ClosureContext {
 
 /// Keeps track of information about the innermost function or closure being
 /// inferred.
-class _SyncStarClosureContext extends ClosureContext {
+class _SyncStarContext extends BodyInferenceContext {
   final InferenceVisitorBase inferrer;
 
   @override
@@ -784,7 +782,7 @@ class _SyncStarClosureContext extends ClosureContext {
   /// being inferred.
   List<DartType>? _yieldElementTypes;
 
-  _SyncStarClosureContext(
+  _SyncStarContext(
     this.inferrer,
     this._yieldElementContext,
     this._declaredReturnType,
@@ -823,10 +821,8 @@ class _SyncStarClosureContext extends ClosureContext {
         )
         .expression;
     node.expression = expression..parent = node;
-    DartType type = expressionResult.inferredType;
-    if (!identical(expressionResult.expression, expression)) {
-      type = inferrer.computeGreatestClosure(expectedType);
-    }
+    DartType type =
+        expressionResult.postCoercionType ?? expressionResult.inferredType;
     if (_needToInferReturnType) {
       DartType elementType = type;
       if (node.isYieldStar) {
@@ -908,7 +904,7 @@ class _SyncStarClosureContext extends ClosureContext {
 
 /// Keeps track of information about the innermost function or closure being
 /// inferred.
-class _AsyncStarClosureContext extends ClosureContext {
+class _AsyncStarContext extends BodyInferenceContext {
   final InferenceVisitorBase inferrer;
 
   @override
@@ -946,7 +942,7 @@ class _AsyncStarClosureContext extends ClosureContext {
   /// being inferred.
   List<DartType>? _yieldElementTypes;
 
-  _AsyncStarClosureContext(
+  _AsyncStarContext(
     this.inferrer,
     this._yieldElementContext,
     this._declaredReturnType,
@@ -986,10 +982,8 @@ class _AsyncStarClosureContext extends ClosureContext {
         )
         .expression;
     node.expression = expression..parent = node;
-    DartType type = expressionResult.inferredType;
-    if (!identical(expressionResult.expression, expression)) {
-      type = inferrer.computeGreatestClosure(expectedType);
-    }
+    DartType type =
+        expressionResult.postCoercionType ?? expressionResult.inferredType;
     if (_needToInferReturnType) {
       DartType elementType = type;
       if (node.isYieldStar) {

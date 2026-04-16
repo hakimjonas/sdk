@@ -1072,13 +1072,13 @@ class InternalLocalVariable extends TreeNode
   int binaryOffsetNoTag = -1;
 
   @override
-  List<VariableContext>? get contexts {
-    throw new UnsupportedError("${this.runtimeType}.contexts");
+  List<VariableContext>? get capturedContexts {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts");
   }
 
   @override
-  void set contexts(List<VariableContext>? value) {
-    throw new UnsupportedError("${this.runtimeType}.contexts=");
+  void set capturedContexts(List<VariableContext>? value) {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts=");
   }
 
   @override
@@ -1124,14 +1124,14 @@ class InternalPositionalParameter extends TreeNode
 
   @override
   // TODO(62620): Conforming to [VariableInitialization] interface. Remove this.
-  List<VariableContext>? get contexts {
-    throw new UnsupportedError("${this.runtimeType}.contexts");
+  List<VariableContext>? get capturedContexts {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts");
   }
 
   @override
   // TODO(62620): Conforming to [VariableInitialization] interface. Remove this.
-  void set contexts(List<VariableContext>? value) {
-    throw new UnsupportedError("${this.runtimeType}.contexts=");
+  void set capturedContexts(List<VariableContext>? value) {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts=");
   }
 
   @override
@@ -1227,14 +1227,14 @@ class InternalNamedParameter extends TreeNode
 
   @override
   // TODO(62620): Conforming to [VariableInitialization] interface. Remove this.
-  List<VariableContext>? get contexts {
-    throw new UnsupportedError("${this.runtimeType}.contexts");
+  List<VariableContext>? get capturedContexts {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts");
   }
 
   @override
   // TODO(62620): Conforming to [VariableInitialization] interface. Remove this.
-  void set contexts(List<VariableContext>? value) {
-    throw new UnsupportedError("${this.runtimeType}.contexts=");
+  void set capturedContexts(List<VariableContext>? value) {
+    throw new UnsupportedError("${this.runtimeType}.capturedContexts=");
   }
 
   @override
@@ -1442,7 +1442,6 @@ mixin DelegatingVariableMixin on InternalVariableMixin
   bool get hasDeclaredInitializer => astVariable.hasDeclaredInitializer;
 
   @override
-  // Coverage-ignore(suite): Not run.
   void set hasDeclaredInitializer(bool value) {
     astVariable.hasDeclaredInitializer = value;
   }
@@ -1484,7 +1483,6 @@ mixin DelegatingVariableMixin on InternalVariableMixin
   }
 
   @override
-  // Coverage-ignore(suite): Not run.
   bool get isErroneouslyInitialized => astVariable.isErroneouslyInitialized;
 
   @override
@@ -1757,12 +1755,12 @@ mixin DelegatingVariableMixin on InternalVariableMixin
 
   @override
   // Coverage-ignore(suite): Not run.
-  List<VariableContext>? get contexts => astVariable.contexts;
+  List<VariableContext>? get capturedContexts => astVariable.capturedContexts;
 
   @override
   // Coverage-ignore(suite): Not run.
-  void set contexts(List<VariableContext>? value) {
-    astVariable.contexts = value;
+  void set capturedContexts(List<VariableContext>? value) {
+    astVariable.capturedContexts = value;
   }
 
   @override

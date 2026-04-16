@@ -16,7 +16,7 @@ import '../kernel/internal_ast.dart';
 import '../source/source_constructor_builder.dart';
 import '../source/source_library_builder.dart' show SourceLibraryBuilder;
 import '../util/helpers.dart';
-import 'closure_context.dart';
+import 'body_inference_context.dart';
 import 'context_allocation_strategy.dart';
 import 'inference_results.dart';
 import 'inference_visitor.dart';
@@ -73,6 +73,8 @@ abstract class TypeInferrer {
     required Uri fileUri,
     required SourceConstructorBuilder constructorBuilder,
     required Initializer initializer,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
   });
 
   /// Performs type inference on the given metadata [annotations].
@@ -247,7 +249,7 @@ class TypeInferrerImpl implements TypeInferrer {
       fileUri: fileUri,
       expressionEvaluationHelper: expressionEvaluationHelper,
     );
-    ClosureContext closureContext = new ClosureContext(
+    BodyInferenceContext bodyContext = new BodyInferenceContext(
       visitor,
       asyncMarker,
       returnType,
@@ -260,10 +262,7 @@ class TypeInferrerImpl implements TypeInferrer {
         internalThisVariable: internalThisVariable,
       );
     }
-    StatementInferenceResult result = visitor.inferStatement(
-      body,
-      closureContext,
-    );
+    StatementInferenceResult result = visitor.inferStatement(body, bodyContext);
     if (scopeProviderInfo != null) {
       visitor.endFunctionBodyInference(scopeProviderInfo);
     }
@@ -275,14 +274,14 @@ class TypeInferrerImpl implements TypeInferrer {
         );
       }
     }
-    result = closureContext.handleImplicitReturn(
+    result = bodyContext.handleImplicitReturn(
       visitor,
       body,
       result,
       fileOffset,
     );
     visitor.checkCleanState();
-    DartType? emittedValueType = closureContext.emittedValueType;
+    DartType? emittedValueType = bodyContext.emittedValueType;
     assert(asyncMarker == AsyncMarker.Sync || emittedValueType != null);
     flowAnalysis.finish();
     return new InferredFunctionBody(
@@ -359,6 +358,8 @@ class TypeInferrerImpl implements TypeInferrer {
     required Uri fileUri,
     required SourceConstructorBuilder constructorBuilder,
     required Initializer initializer,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
   }) {
     // Use polymorphic dispatch on [KernelInitializer] to perform whatever
     // kind of type inference is correct for this kind of initializer.
@@ -369,7 +370,17 @@ class TypeInferrerImpl implements TypeInferrer {
       fileUri: fileUri,
       constructorBuilder: constructorBuilder,
     );
+    ScopeProviderInfo? scopeProviderInfo;
+    if (isClosureContextLoweringEnabled) {
+      scopeProviderInfo = visitor.beginFunctionBodyInference(
+        parameters,
+        internalThisVariable: internalThisVariable,
+      );
+    }
     InitializerInferenceResult result = visitor.inferInitializer(initializer);
+    if (scopeProviderInfo != null) {
+      visitor.endFunctionBodyInference(scopeProviderInfo);
+    }
     visitor.checkCleanState();
     return result;
   }
@@ -491,12 +502,16 @@ class TypeInferrerImplBenchmarked implements TypeInferrer {
     required Uri fileUri,
     required SourceConstructorBuilder constructorBuilder,
     required Initializer initializer,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
   }) {
     benchmarker.beginSubdivide(BenchmarkSubdivides.inferInitializer);
     InitializerInferenceResult result = impl.inferInitializer(
       fileUri: fileUri,
       constructorBuilder: constructorBuilder,
       initializer: initializer,
+      parameters: parameters,
+      internalThisVariable: internalThisVariable,
     );
     benchmarker.endSubdivide();
     return result;

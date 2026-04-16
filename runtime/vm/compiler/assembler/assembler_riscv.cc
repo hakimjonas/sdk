@@ -4799,6 +4799,26 @@ void Assembler::CompareObject(Register reg, const Object& object) {
   }
 }
 
+void Assembler::ExtractBitField(Register dst,
+                                Register src,
+                                intptr_t low_bit,
+                                intptr_t width) {
+  ASSERT((0 <= low_bit) && (low_bit + width <= XLEN));
+  if (width == 1) {
+    if (low_bit == 0) {
+      andi(dst, src, 1);
+      return;
+    } else if (Supports(RV_Zbs)) {
+      bexti(dst, src, low_bit);
+      return;
+    }
+  }
+  if (low_bit + width < XLEN) {
+    slli(dst, src, XLEN - (low_bit + width));
+  }
+  srli(dst, dst, XLEN - width);
+}
+
 void Assembler::ExtractClassIdFromTags(Register result, Register tags) {
   ASSERT(target::UntaggedObject::kClassIdTagPos == 12);
   ASSERT(target::UntaggedObject::kClassIdTagSize == 20);
@@ -5248,8 +5268,10 @@ void Assembler::LeaveDartFrame(intptr_t fp_sp_dist) {
     subi(PP, PP, kHeapObjectTag);
   }
   set_constant_pool_allowed(false);
-  lx(FP, Address(SP, fp_offset));
+  // Update RA first so the profiler can identify the frame as the entry frame
+  // after FP is updated but before the return instruction.
   lx(RA, Address(SP, ra_offset));
+  lx(FP, Address(SP, fp_offset));
   addi(SP, SP, -fp_sp_dist);
 }
 

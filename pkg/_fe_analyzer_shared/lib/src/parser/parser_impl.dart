@@ -562,7 +562,6 @@ class Parser {
         /* beginToken = */ token.next!,
         /* modifierStart = */ token,
         /* keyword = */ next,
-        /* macroToken = */ null,
         /* sealedToken = */ null,
         /* baseToken = */ null,
         /* interfaceToken = */ null,
@@ -592,16 +591,10 @@ class Parser {
       }
     }
     next = token.next!;
-    Token? macroToken;
     Token? sealedToken;
     Token? baseToken;
     Token? interfaceToken;
-    if (next.isIdentifier &&
-        next.lexeme == 'macro' &&
-        next.next!.isA(Keyword.CLASS)) {
-      macroToken = next;
-      next = next.next!;
-    } else if (next.isIdentifier && next.isA(Keyword.SEALED)) {
+    if (next.isIdentifier && next.isA(Keyword.SEALED)) {
       sealedToken = next;
       if (next.next!.isA(Keyword.CLASS) ||
           next.next!.isA(Keyword.MIXIN) ||
@@ -635,7 +628,6 @@ class Parser {
         /* beginToken = */ beginToken,
         /* modifierStart = */ modifierStart,
         /* keyword = */ next,
-        /* macroToken = */ macroToken,
         /* sealedToken = */ sealedToken,
         /* baseToken = */ baseToken,
         /* interfaceToken = */ interfaceToken,
@@ -681,7 +673,6 @@ class Parser {
     Token beginToken,
     Token modifierStart,
     Token keyword,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -694,7 +685,6 @@ class Parser {
         beginToken,
         modifierStart,
         keyword,
-        macroToken,
         sealedToken,
         baseToken,
         interfaceToken,
@@ -791,7 +781,6 @@ class Parser {
               beginToken,
               modifierStart,
               keyword.next!,
-              macroToken,
               sealedToken,
               baseToken,
               interfaceToken,
@@ -847,7 +836,6 @@ class Parser {
     Token beginToken,
     Token modifierStart,
     Token classKeyword,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -875,7 +863,6 @@ class Parser {
     return parseClassOrNamedMixinApplication(
       beginToken,
       context.abstractToken,
-      macroToken,
       sealedToken,
       baseToken,
       interfaceToken,
@@ -974,21 +961,17 @@ class Parser {
     listener.beginUncategorizedTopLevelDeclaration(importKeyword);
     listener.beginImport(importKeyword);
     Token start = importKeyword;
-    Token? augmentToken;
-    if (start.next!.isIdentifier && start.next!.lexeme == 'augment') {
-      start = augmentToken = start.next!;
-    }
     Token token = ensureLiteralString(start);
     Token uri = token;
     token = parseConditionalUriStar(token);
     token = parseImportPrefixOpt(token);
     token = parseCombinatorStar(token).next!;
     if (token.isA(TokenType.SEMICOLON)) {
-      listener.endImport(importKeyword, augmentToken, token);
+      listener.endImport(importKeyword, token);
       return token;
     } else {
       // Recovery
-      listener.endImport(importKeyword, augmentToken, /* semicolon = */ null);
+      listener.endImport(importKeyword, /* semicolon = */ null);
       return parseImportRecovery(uri);
     }
   }
@@ -1741,7 +1724,7 @@ class Parser {
   ///                           ( ',' recordTypeNamedField )* ','? '}'
   /// recordTypeNamedField  ::= metadata type identifier
   Token parseRecordType(
-    final Token start,
+    Token start,
     Token token,
     bool isQuestionMarkPartOfType,
   ) {
@@ -2840,7 +2823,7 @@ class Parser {
   /// and the last skipped token is returned.
   /// Otherwise null is returned.
   Token? recoverySmallLookAheadSkipTokens(
-    final Token token,
+    Token token,
     List<TokenType> lookFor,
   ) {
     // Recovery: Allow a small lookahead for '{'. E.g. the user might be in
@@ -2938,7 +2921,6 @@ class Parser {
   Token parseClassOrNamedMixinApplication(
     Token beginToken,
     Token? abstractToken,
-    Token? macroToken,
     Token? sealedToken,
     Token? baseToken,
     Token? interfaceToken,
@@ -2995,7 +2977,6 @@ class Parser {
       listener.beginNamedMixinApplication(
         beginToken,
         abstractToken,
-        macroToken,
         sealedToken,
         baseToken,
         interfaceToken,
@@ -3009,7 +2990,6 @@ class Parser {
       listener.beginClassDeclaration(
         beginToken,
         abstractToken,
-        macroToken,
         sealedToken,
         baseToken,
         interfaceToken,
@@ -4026,6 +4006,7 @@ class Parser {
 
     Token? skippedNonLateLate;
 
+    Token? abstractToken;
     Token? externalToken;
     Token? augmentToken;
     Token? lateToken;
@@ -4075,6 +4056,7 @@ class Parser {
             token = context.parseTopLevelMemberModifiers(token);
             next = token.next!;
 
+            abstractToken = context.abstractToken;
             augmentToken = context.augmentToken;
             externalToken = context.externalToken;
             lateToken = context.lateToken;
@@ -4105,7 +4087,7 @@ class Parser {
         rewriter.dropRange(syntheticName, afterOuterPattern.next!);
         return parseFields(
           beforeStart,
-          /* abstractToken = */ null,
+          abstractToken,
           augmentToken,
           externalToken,
           /* staticToken = */ null,
@@ -4235,6 +4217,9 @@ class Parser {
       } else if (lateToken != null) {
         reportRecoverableErrorWithToken(lateToken, diag.extraneousModifier);
       }
+      if (abstractToken != null) {
+        reportRecoverableErrorWithToken(abstractToken, diag.extraneousModifier);
+      }
       return parseTopLevelMethod(
         beforeStart,
         augmentToken,
@@ -4250,9 +4235,12 @@ class Parser {
     if (getOrSet != null) {
       reportRecoverableErrorWithToken(getOrSet, diag.extraneousModifier);
     }
+    if (!_isAugmentationsFeatureEnabled && abstractToken != null) {
+      reportRecoverableErrorWithToken(abstractToken, diag.extraneousModifier);
+    }
     return parseFields(
       beforeStart,
-      /* abstractToken = */ null,
+      abstractToken,
       augmentToken,
       externalToken,
       /* staticToken = */ null,
@@ -4286,8 +4274,8 @@ class Parser {
   ) {
     listener.beginFields(
       kind,
-      abstractToken,
       augmentToken,
+      abstractToken,
       externalToken,
       staticToken,
       covariantToken,
@@ -4380,7 +4368,6 @@ class Parser {
     }
     switch (kind) {
       case DeclarationKind.TopLevel:
-        assert(abstractToken == null);
         break;
       case DeclarationKind.Class:
       case DeclarationKind.Mixin:
@@ -4409,6 +4396,7 @@ class Parser {
     if (kind == DeclarationKind.TopLevel) {
       listener.endTopLevelFields(
         augmentToken,
+        abstractToken,
         externalToken,
         staticToken,
         covariantToken,
@@ -4751,7 +4739,7 @@ class Parser {
   /// ```
   ///   'super' ('.' identifier)? arguments ;
   /// ```
-  Token parseSuperInitializerExpression(final Token start) {
+  Token parseSuperInitializerExpression(Token start) {
     Token token = start.next!;
     assert(token.isA(Keyword.SUPER));
     Token next = token.next!;
@@ -8519,10 +8507,7 @@ class Parser {
   ///   genericFunctionLiteral ::=
   ///       typeParameters formalParameterList functionBody
   /// Provide token for [constKeyword] if preceded by 'const', null if not.
-  Token parseLiteralListSetMapOrFunction(
-    final Token start,
-    Token? constKeyword,
-  ) {
+  Token parseLiteralListSetMapOrFunction(Token start, Token? constKeyword) {
     assert(start.next!.isA(TokenType.LT));
     TypeParamOrArgInfo typeParamOrArg = computeTypeParamOrArg(
       start,
@@ -9547,7 +9532,7 @@ class Parser {
         token.isA(Keyword.SYNC);
   }
 
-  Token parseExpressionStatementOrConstDeclaration(final Token start) {
+  Token parseExpressionStatementOrConstDeclaration(Token start) {
     Token constToken = start.next!;
     assert(constToken.isA(Keyword.CONST));
     if (!isModifier(constToken.next!)) {
@@ -9596,7 +9581,7 @@ class Parser {
   /// local variable declaration nor a pattern variable declaration is found,
   /// then this method will return [start].
   Token parseExpressionStatementOrDeclaration(
-    final Token start, [
+    Token start, [
     ForPartsContext? forPartsContext,
   ]) {
     Token token = start;

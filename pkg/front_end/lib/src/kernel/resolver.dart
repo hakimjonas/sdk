@@ -462,6 +462,8 @@ class Resolver {
     ProblemReporting problemReporting = libraryBuilder;
     LibraryFeatures libraryFeatures = libraryBuilder.libraryFeatures;
     ConstantContext constantContext = bodyBuilderContext.constantContext;
+    ThisVariable? internalThisVariable = bodyBuilderContext
+        .createInternalThisVariable();
     BodyBuilder bodyBuilder = _createBodyBuilder(
       context: context,
       bodyBuilderContext: bodyBuilderContext,
@@ -470,8 +472,7 @@ class Resolver {
       formalParameterScope: formalParameterScope,
       thisVariable: null,
       thisTypeParameters: null,
-      // TODO(cstefantsova): Should [ThisVariable] be created here?
-      internalThisVariable: null,
+      internalThisVariable: internalThisVariable,
     );
     constructorBuilder.inferFormalTypes(_classHierarchy);
     BuildInitializersResult result = bodyBuilder.buildInitializers(
@@ -505,6 +506,12 @@ class Resolver {
         constantContext: constantContext,
         initializers: initializers,
         forPrimaryConstructor: forPrimaryConstructor,
+        parameters: <VariableDeclaration>[
+          for (FormalParameterBuilder formal
+              in bodyBuilderContext.formals ?? [])
+            formal.variable,
+        ],
+        internalThisVariable: internalThisVariable,
       );
     }
     context.performBacklog(result.annotations);
@@ -1214,9 +1221,10 @@ class Resolver {
     required int fileOffset,
   }) {
     if (!variable.isLocalFunction && !variable.isWildcard) {
-      assignedVariables.read(variable);
+      assignedVariables.read(variable.astVariable);
     }
-    return new VariableGet(variable.astVariable)..fileOffset = fileOffset;
+    return new VariableGet(variable.asExpressionVariable)
+      ..fileOffset = fileOffset;
   }
 
   void _declareFormals({
@@ -1263,6 +1271,8 @@ class Resolver {
     required ConstantContext constantContext,
     required List<Initializer> initializers,
     required bool forPrimaryConstructor,
+    required List<VariableDeclaration> parameters,
+    required ThisVariable? internalThisVariable,
   }) {
     _InitializerBuilder initializerBuilder = new _InitializerBuilder(
       compilerContext: compilerContext,
@@ -1280,6 +1290,8 @@ class Resolver {
       asyncMarker: asyncModifier,
       asyncModifierFileOffset: body?.fileOffset,
       forPrimaryConstructor: forPrimaryConstructor,
+      parameters: parameters,
+      internalThisVariable: internalThisVariable,
     );
 
     if (body == null && !bodyBuilderContext.isExternalConstructor) {
@@ -1396,6 +1408,10 @@ class Resolver {
       }
     }
 
+    late List<VariableDeclaration>? parameters = <VariableDeclaration>[
+      for (FormalParameterBuilder formal in bodyBuilderContext.formals ?? [])
+        formal.variable,
+    ];
     if (bodyBuilderContext.isConstructor) {
       _finishConstructor(
         context: context,
@@ -1411,6 +1427,8 @@ class Resolver {
         constantContext: constantContext,
         initializers: initializers,
         forPrimaryConstructor: forPrimaryConstructor,
+        parameters: parameters,
+        internalThisVariable: internalThisVariable,
       );
     }
 
@@ -1434,11 +1452,7 @@ class Resolver {
         returnType: returnType,
         asyncMarker: asyncMarker,
         body: body,
-        parameters: <VariableDeclaration>[
-          for (FormalParameterBuilder formal
-              in bodyBuilderContext.formals ?? [])
-            formal.variable,
-        ],
+        parameters: parameters,
         internalThisVariable: internalThisVariable,
       );
       body = inferredFunctionBody.body;

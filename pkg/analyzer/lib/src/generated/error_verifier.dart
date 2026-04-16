@@ -4836,13 +4836,20 @@ class ErrorVerifier extends RecursiveAstVisitor<void>
               .withArguments(name: className)
               .at(superclass),
         );
-      } else if (withClause != null &&
-          !(element.isMixinApplication && withClause.mixinTypes.length < 2)) {
-        diagnosticReporter.report(
-          diag.mixinClassDeclarationExtendsNotObject
-              .withArguments(name: className)
-              .at(withClause),
-        );
+      } else if (withClause != null) {
+        if (!element.isMixinApplication) {
+          diagnosticReporter.report(
+            diag.mixinClassDeclarationWithClause
+                .withArguments(name: className)
+                .at(withClause),
+          );
+        } else if (withClause.mixinTypes.length >= 2) {
+          diagnosticReporter.report(
+            diag.mixinModifierMixinApplicationClassWithMultipleMixins
+                .withArguments(name: className)
+                .at(withClause),
+          );
+        }
       }
     }
   }
@@ -5256,9 +5263,10 @@ class ErrorVerifier extends RecursiveAstVisitor<void>
   }
 
   void _checkForNonConstGenerativeEnumConstructor(ConstructorDeclaration node) {
-    if (_enclosingClass is EnumElement &&
-        node.constKeyword == null &&
-        node.factoryKeyword == null) {
+    var element = node.declaredFragment!.element;
+    if (element.enclosingElement is EnumElement &&
+        element.isGenerative &&
+        !element.isConst) {
       diagnosticReporter.report(
         diag.nonConstGenerativeEnumConstructor.atSourceRange(node.errorRange),
       );
